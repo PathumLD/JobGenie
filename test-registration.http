@@ -1,0 +1,88 @@
+### Test Candidate Registration API
+
+# Test successful registration
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "nic": "123456789V",
+  "passport": "A12345678",
+  "gender": "male",
+  "date_of_birth": "1990-01-01",
+  "address": "123 Main Street, Colombo 01, Sri Lanka",
+  "phone": "+94771234567",
+  "email": "john.doe@example.com",
+  "password": "securepassword123",
+  "confirm_password": "securepassword123"
+}
+
+###
+
+# Test validation error - missing required fields
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "first_name": "Jane",
+  "email": "jane.doe@example.com",
+  "password": "password123"
+}
+
+###
+
+# Test validation error - password mismatch
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "nic": "987654321V",
+  "gender": "female",
+  "date_of_birth": "1995-05-15",
+  "address": "456 Oak Avenue, Kandy, Sri Lanka",
+  "phone": "+94779876543",
+  "email": "jane.doe@example.com",
+  "password": "securepassword123",
+  "confirm_password": "differentpassword"
+}
+
+###
+
+# Test validation error - invalid email format
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "first_name": "Bob",
+  "last_name": "Smith",
+  "nic": "555666777V",
+  "gender": "other",
+  "date_of_birth": "1985-12-25",
+  "address": "789 Pine Road, Galle, Sri Lanka",
+  "phone": "+94775554444",
+  "email": "invalid-email-format",
+  "password": "securepassword123",
+  "confirm_password": "securepassword123"
+}
+
+###
+
+# Test validation error - password too short
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "first_name": "Alice",
+  "last_name": "Johnson",
+  "nic": "111222333V",
+  "gender": "prefer_not_to_say",
+  "date_of_birth": "2000-08-10",
+  "address": "321 Elm Street, Jaffna, Sri Lanka",
+  "phone": "+94771112222",
+  "email": "alice.johnson@example.com",
+  "password": "123",
+  "confirm_password": "123"
+}

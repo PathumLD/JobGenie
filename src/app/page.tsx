@@ -26,7 +26,7 @@ export default function Home() {
               <span className="block text-emerald-600 mt-2">Career Partner</span>
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-emerald-700 max-w-2xl sm:max-w-3xl mx-auto leading-relaxed px-4">
-              Whether you're seeking your next career move or looking for the perfect candidate, 
+              Whether you&apos;re seeking your next career move or looking for the perfect candidate, 
               Job Genie uses advanced AI to match talent with opportunity.
             </p>
           </div>
@@ -55,7 +55,7 @@ export default function Home() {
                     onClick={() => handleUserTypeSelection('candidate')}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
-                    Let's Get Started
+                    Let&apos;s Get Started
                   </Button>
                 </CardContent>
               </Card>
@@ -101,7 +101,7 @@ export default function Home() {
                     onClick={() => handleUserTypeSelection('employer')}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
-                    Let's Get Started
+                    Let&apos;s Get Started
                   </Button>
                 </CardContent>
               </Card>

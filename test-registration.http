@@ -306,3 +306,123 @@ Content-Type: application/json
 # Test candidate list (requires admin authentication - MIS or recruitment agency)
 GET http://localhost:3000/api/candidate/list
 Content-Type: application/json
+
+###
+
+# Test Employer Registration API
+
+# Test successful employer registration
+POST http://localhost:3000/api/auth/register-employer
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="company_name"
+
+Tech Solutions Ltd
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="business_registration_no"
+
+BR123456789
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="business_registration_certificate"; filename="business_registration.pdf"
+Content-Type: application/pdf
+
+< ./test-files/business_registration.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="business_registered_address"
+
+123 Business Park, Colombo 02, Sri Lanka
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="industry"
+
+Technology
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="first_name"
+
+Jane
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="last_name"
+
+Smith
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="email"
+
+jane.smith@techsolutions.lk
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="password"
+
+SecurePass123!
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="confirm_password"
+
+SecurePass123!
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Test employer registration validation error - missing required fields
+POST http://localhost:3000/api/auth/register-employer
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="company_name"
+
+Test Company
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="email"
+
+test@company.com
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="password"
+
+password123
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Test employer registration validation error - passwords don't match
+POST http://localhost:3000/api/auth/register-employer
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="company_name"
+
+Test Company
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="business_registration_no"
+
+BR987654321
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="business_registration_certificate"; filename="test_cert.pdf"
+Content-Type: application/pdf
+
+< ./test-files/test_cert.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="business_registered_address"
+
+123 Test Street
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="industry"
+
+Technology
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="first_name"
+
+John
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="last_name"
+
+Doe
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="email"
+
+john.doe@testcompany.com
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="password"
+
+password123
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="confirm_password"
+
+differentpassword
+------WebKitFormBoundary7MA4YWxkTrZu0gW--

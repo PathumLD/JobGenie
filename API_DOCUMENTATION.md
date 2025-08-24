@@ -712,3 +712,8 @@ export async function POST(request: NextRequest) {
   // Your API logic here
 }
 ```
+ 
+ # #   E m p l o y e r   R e g i s t r a t i o n   A P I  
+  
+ # # #   E n d p o i n t  
+ 

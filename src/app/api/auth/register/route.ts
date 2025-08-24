@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import type { CandidateRegistrationRequest, CandidateRegistrationResponse, ApiErrorResponse } from '@/types/api';
+import { createTransporter, createVerificationEmail } from '@/lib/email';
+import { generateMembershipNumberFromUserId } from '@/lib/membership';
+import type { CandidateRegistrationResponse, ApiErrorResponse } from '@/types/api';
 
 const prisma = new PrismaClient();
 
@@ -74,18 +76,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
       );
     }
 
+    // Check if NIC already exists (if provided)
+    if (nic) {
+      const existingCandidateWithNIC = await prisma.candidate.findFirst({
+        where: { nic }
+      });
+
+      if (existingCandidateWithNIC) {
+        return NextResponse.json(
+          { error: 'A candidate with this NIC already exists' },
+          { status: 409 }
+        );
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Get the next membership number
-    const lastCandidate = await prisma.candidate.findFirst({
-      orderBy: { membership_no: 'desc' }
-    });
-    const nextMembershipNo = (lastCandidate?.membership_no || 0) + 1;
-
     // Create user and candidate in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create user record
+      // Generate 6-digit verification token
+      const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+      const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+      // Create user record first
       const user = await tx.user.create({
         data: {
           first_name,
@@ -97,9 +111,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
           role: 'candidate',
           status: 'pending_verification',
           email_verified: false,
+          email_verification_token: verificationToken,
+          verification_token_expires_at: tokenExpiry,
           is_created: true
         }
       });
+
+      // Generate membership number based on user ID + 1000
+      const membershipNo = generateMembershipNumberFromUserId(user.id);
 
       // Create candidate record
       const candidate = await tx.candidate.create({
@@ -113,21 +132,36 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
           phone1: phone,
           nic,
           passport,
-          membership_no: nextMembershipNo,
+          membership_no: membershipNo,
           profile_completion_percentage: 25, // Basic info completed
           completedProfile: false
         }
       });
 
-      return { user, candidate };
+      return { user, candidate, verificationToken };
     });
 
+    // Send verification email
+    try {
+      const transporter = createTransporter();
+      const mailOptions = createVerificationEmail(
+        email, 
+        result.verificationToken, 
+        first_name
+      );
+
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      console.error('Verification email sending error:', emailError);
+      // Don't fail registration if email fails, but log the error
+    }
+
     // Remove sensitive information from response
-    const { password: _, ...userWithoutPassword } = result.user;
+    const { password: _unused, ...userWithoutPassword } = result.user;
 
     return NextResponse.json(
       {
-        message: 'Candidate registered successfully',
+        message: 'Candidate registered successfully. Please check your email to verify your account.',
         user: userWithoutPassword,
         candidate: result.candidate
       },

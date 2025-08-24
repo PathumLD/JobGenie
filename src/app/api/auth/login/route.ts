@@ -1,0 +1,188 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import type { UserLoginResponse, ApiErrorResponse } from '@/types/api';
+import { generateAccessToken, generateRefreshToken, setJWTCookies } from '@/lib/jwt';
+
+const prisma = new PrismaClient();
+
+// Validation schema for user login
+const userLoginSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required')
+});
+
+export async function POST(request: NextRequest): Promise<NextResponse<UserLoginResponse | ApiErrorResponse>> {
+  try {
+    const body = await request.json();
+    
+    // Validate request body
+    const validationResult = userLoginSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errorDetails = validationResult.error.issues.map(issue => ({
+        code: issue.code,
+        message: issue.message,
+        path: issue.path.map(p => typeof p === 'string' ? p : String(p))
+      }));
+      
+      return NextResponse.json(
+        { 
+          error: 'Validation failed', 
+          details: errorDetails 
+        }, 
+        { status: 400 }
+      );
+    }
+
+    const { email, password } = validationResult.data;
+
+    // Find user by email with both candidate and employer profiles
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        candidate: true,
+        employer: {
+          include: {
+            company: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has a password (for email/password authentication)
+    if (!user.password) {
+      return NextResponse.json(
+        { error: 'Invalid authentication method. This account uses social login' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is active
+    if (user.status !== 'active') {
+      return NextResponse.json(
+        { error: 'Account is not active. Please verify your email or contact support' },
+        { status: 403 }
+      );
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
+    // Determine user type and get profile
+    let userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+    let profile: typeof user.candidate | typeof user.employer | null = null;
+
+    if (user.role === 'candidate' && user.candidate) {
+      userType = 'candidate';
+      profile = user.candidate;
+    } else if (user.role === 'employer' && user.employer) {
+      userType = 'employer';
+      profile = user.employer;
+    } else if (user.role === 'mis') {
+      userType = 'mis';
+      // MIS users don't have separate profile tables
+    } else if (user.role === 'recruitment_agency') {
+      userType = 'recruitment_agency';
+      // Recruitment agency users don't have separate profile tables
+    } else {
+      return NextResponse.json(
+        { error: 'User profile not found. Please contact support' },
+        { status: 404 }
+      );
+    }
+
+    // Update last login timestamp
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { last_login_at: new Date() }
+    });
+
+    // Generate JWT tokens
+    const jwtPayload = {
+      userId: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      membership_no: userType === 'candidate' && profile && 'membership_no' in profile ? (profile as { membership_no: string }).membership_no : undefined,
+      role: user.role as 'candidate' | 'employer' | 'mis' | 'recruitment_agency',
+      userType: userType
+    };
+
+    const accessToken = generateAccessToken(jwtPayload);
+    const refreshToken = generateRefreshToken(jwtPayload);
+
+    // Debug: Log JWT tokens
+    console.log('Generated JWT tokens:');
+    console.log('Access Token:', accessToken);
+    console.log('Refresh Token:', refreshToken);
+
+    // Create response
+    const response = NextResponse.json(
+      {
+        message: 'Login successful',
+        user: {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          address: user.address,
+          phone1: user.phone1,
+          phone2: user.phone2,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          email_verified: user.email_verified,
+          last_login_at: user.last_login_at,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+          is_created: user.is_created
+        },
+        profile: profile,
+        user_type: userType,
+        access_token: accessToken,
+        refresh_token: refreshToken
+      },
+      { status: 200 }
+    );
+
+    // Set JWT cookies and return response
+    const responseWithCookies = setJWTCookies(response, accessToken, refreshToken);
+    
+    // Debug: Log cookies being set
+    console.log('Cookies being set:');
+    console.log('Access Token Cookie:', responseWithCookies.cookies.get('access_token')?.value);
+    console.log('Refresh Token Cookie:', responseWithCookies.cookies.get('refresh_token')?.value);
+    
+    return responseWithCookies as NextResponse<UserLoginResponse | ApiErrorResponse>;
+
+  } catch (error) {
+    console.error('Login error:', error);
+    
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: 'Internal server error', message: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}

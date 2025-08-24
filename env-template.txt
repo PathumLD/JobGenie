@@ -1,0 +1,25 @@
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key_change_in_production
+
+# Supabase Configuration (Optional - for future integrations)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_JWT_SECRET=your_supabase_jwt_secret
+
+# Database Configuration
+DATABASE_URL=your_database_connection_string
+DIRECT_URL=your_direct_database_connection_string
+
+# Site Configuration (Optional - for success email links)
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# SMTP Configuration for Email Verification
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+
+# Note: Copy these variables to your .env file and fill in your actual values
+# Never commit the actual .env file to version control

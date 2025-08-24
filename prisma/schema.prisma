@@ -280,6 +280,7 @@ model User {
   status                    UserStatus?        @default(pending_verification)
   email_verified            Boolean?           @default(false)
   email_verification_token  String?            @db.VarChar(255)
+  verification_token_expires_at   DateTime?
   password_reset_token      String?            @db.VarChar(255)
   password_reset_expires_at DateTime?
   provider                  String?            // 'google', 'github', etc. - null for email/password
@@ -319,7 +320,7 @@ model Candidate {
   personal_website              String?
   nic                           String?            @db.VarChar(50)
   passport                      String?            @db.VarChar(50)
-  membership_no                 Int
+  membership_no                 String
   remote_preference             RemotePreference?  @default(flexible)
   experience_level              ExperienceLevel?   @default(entry)
   years_of_experience           Int?               @default(0)

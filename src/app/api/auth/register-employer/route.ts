@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 const employerRegistrationSchema = z.object({
   company_name: z.string().min(1, 'Company name is required').max(200, 'Company name must be less than 200 characters'),
   business_registration_no: z.string().min(1, 'Business registration number is required').max(20, 'Business registration number must be less than 20 characters'),
-  business_registration_certificate: z.instanceof(File, { message: 'Business registration certificate is required' }),
+  business_registration_certificate: z.custom<File>((val) => val && typeof val === 'object' && 'name' in val && 'size' in val && 'type' in val, { message: 'Business registration certificate is required' }),
   business_registered_address: z.string().min(1, 'Business registered address is required'),
   industry: z.string().min(1, 'Industry is required').max(100, 'Industry must be less than 100 characters'),
   first_name: z.string().min(1, 'First name is required').max(100, 'First name must be less than 100 characters'),
@@ -68,9 +68,8 @@ export async function POST(request: NextRequest) {
 
     const {
       business_registration_certificate: certificateFile,
-      password: _password, // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      confirm_password: _confirmPassword, // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      ...validatedData
+      password: validatedPassword,
+
     } = validationResult.data;
 
     // Check if user already exists
@@ -86,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if company already exists with the same business registration number
-    const existingCompany = await prisma.company.findUnique({
+    const existingCompany = await prisma.company.findFirst({
       where: { business_registration_no }
     });
 
@@ -101,17 +100,16 @@ export async function POST(request: NextRequest) {
     await ensureBucketExists();
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(validatedPassword, 12);
 
     // Generate email verification token
     const verificationToken = Math.random().toString(36).substring(2, 8).toUpperCase();
     const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Create user, company, and employer records in a transaction
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await prisma.$transaction(async (tx: any) => {
+    const result = await prisma.$transaction(async (prismaClient: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>) => {
       // Create user record
-      const user = await tx.user.create({
+      const user = await prismaClient.user.create({
         data: {
           first_name,
           last_name,
@@ -134,7 +132,7 @@ export async function POST(request: NextRequest) {
       );
 
       // Create company record
-      const company = await tx.company.create({
+      const company = await prismaClient.company.create({
         data: {
           name: company_name,
           email, // Use employer's email as company email
@@ -148,7 +146,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create employer record
-      const employer = await tx.employer.create({
+      const employer = await prismaClient.employer.create({
         data: {
           user_id: user.id,
           company_id: company.id,

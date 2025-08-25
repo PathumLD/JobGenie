@@ -1,0 +1,266 @@
+### Test Resume Upload API
+
+# Variables
+@baseUrl = http://localhost:3000
+@token = your_jwt_token_here
+
+### 1. Upload Resume (Primary)
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeData"
+
+{
+  "is_primary": true,
+  "is_allow_fetch": true,
+  "original_filename": "John_Doe_Resume_2024.pdf",
+  "file_size": 245760,
+  "file_type": "application/pdf"
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 2. Upload Resume (Secondary)
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="resume_docx.docx"
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+
+< ./resume_docx.docx
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeData"
+
+{
+  "is_primary": false,
+  "is_allow_fetch": false,
+  "original_filename": "John_Doe_Resume_Alternative.docx",
+  "file_size": 189440,
+  "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 3. Upload Resume (Minimal Data)
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="simple_resume.pdf"
+Content-Type: application/pdf
+
+< ./simple_resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 4. Get All Candidate Resumes
+GET {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+
+### 5. Update Resume (Set as Primary)
+PUT {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resume_id": "550e8400-e29b-41d4-a716-446655440000",
+  "is_primary": true,
+  "is_allow_fetch": true
+}
+
+### 6. Update Resume (Change Fetch Permission)
+PUT {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resume_id": "550e8400-e29b-41d4-a716-446655440000",
+  "is_allow_fetch": false
+}
+
+### 7. Delete Resume
+DELETE {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resume_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+
+### 8. Test with Invalid File Type
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="image.jpg"
+Content-Type: image/jpeg
+
+< ./image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 9. Test with File Too Large
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="large_resume.pdf"
+Content-Type: application/pdf
+
+< ./large_resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 10. Test without File
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeData"
+
+{
+  "is_primary": true
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 11. Test with Invalid Token
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer invalid_token_here
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 12. Test without Authorization
+POST {{baseUrl}}/api/candidate/resume/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 13. Test with Wrong Role (if you have an employer token)
+POST {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer employer_token_here
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="resumeFile"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 14. Test Update with Invalid Resume ID
+PUT {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resume_id": "invalid-uuid-format",
+  "is_primary": true
+}
+
+### 15. Test Delete with Invalid Resume ID
+DELETE {{baseUrl}}/api/candidate/resume/upload
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resume_id": "invalid-uuid-format"
+}
+
+### Notes:
+# 1. Replace {{token}} with a valid JWT token for a candidate user
+# 2. For file upload, you need actual files in the same directory
+# 3. This API manages resumes for existing candidate profiles
+# 4. Each candidate gets a separate folder in Supabase storage: candidate_resume/{candidate_id}/
+# 5. Only one resume can be primary at a time
+# 6. File types allowed: PDF, DOC, DOCX
+# 7. Maximum file size: 10MB
+# 8. When a primary resume is deleted, the next most recent resume becomes primary
+# 9. Check your server console for detailed operation logs
+
+### Expected Response Structure:
+
+# POST (Upload) Response:
+# {
+#   "success": true,
+#   "message": "Resume uploaded successfully",
+#   "data": {
+#     "resume_id": "uuid",
+#     "candidate_id": "uuid",
+#     "resume_url": "https://supabase-url.com/resume.pdf",
+#     "original_filename": "resume.pdf",
+#     "file_size": 245760,
+#     "file_type": "application/pdf",
+#     "is_primary": true,
+#     "is_allow_fetch": true,
+#     "uploaded_at": "2024-01-01T00:00:00.000Z",
+#     "storage_path": "candidate_resume/uuid/1234567890_resume.pdf",
+#     "public_url": "https://supabase-url.com/resume.pdf"
+#   }
+# }
+
+# GET Response:
+# {
+#   "success": true,
+#   "data": {
+#     "candidate_id": "uuid",
+#     "resumes": [...],
+#     "total_count": 2,
+#     "primary_resume": {...}
+#   }
+# }
+
+# PUT Response:
+# {
+#   "success": true,
+#   "message": "Resume updated successfully",
+#   "data": {...}
+# }
+
+# DELETE Response:
+# {
+#   "success": true,
+#   "message": "Resume deleted successfully",
+#   "data": {
+#     "deleted_resume_id": "uuid",
+#     "candidate_id": "uuid"
+#   }
+# }
+
+### Storage Structure:
+# Supabase Storage Bucket: candidate_resume
+# Folder Structure: candidate_resume/{candidate_id}/{timestamp}_{filename}
+# Example: candidate_resume/550e8400-e29b-41d4-a716-446655440000/1704067200000_resume.pdf
+
+### Database Updates:
+# 1. Creates record in Resume table
+# 2. Updates resume_url in Candidate table (if primary)
+# 3. Manages is_primary flag across all resumes
+# 4. Handles cascading updates when primary resume changes
+
+### Error Scenarios:
+# - Invalid file type (only PDF, DOC, DOCX allowed)
+# - File too large (>10MB)
+# - Missing file
+# - Invalid token
+# - Wrong user role
+# - Resume not found (for updates/deletes)
+# - Storage upload failures

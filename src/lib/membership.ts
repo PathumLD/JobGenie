@@ -48,7 +48,7 @@ export async function isMembershipNumberUnique(membershipNo: string): Promise<bo
  * @param number - The number to format
  * @returns string - Formatted membership number
  */
-export function formatMembershipNumber(number: number): string {
+export function formatMembershipNumber(number: string | number): string {
   return number.toString().padStart(3, '0');
 }
 

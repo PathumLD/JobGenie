@@ -61,7 +61,7 @@ export interface CandidateRegistrationResponse {
     personal_website?: string | null;
     nic?: string | null;
     passport?: string | null;
-         membership_no: string;
+    membership_no: string;
     remote_preference?: 'remote_only' | 'hybrid' | 'onsite' | 'flexible' | null;
     experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal' | null;
     years_of_experience?: number | null;
@@ -162,7 +162,7 @@ export interface UserLoginResponse {
     personal_website?: string | null;
     nic?: string | null;
     passport?: string | null;
-    membership_no?: number;
+    membership_no?: string;
     remote_preference?: 'remote_only' | 'hybrid' | 'onsite' | 'flexible' | null;
     experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal' | null;
     years_of_experience?: number | null;
@@ -384,6 +384,7 @@ export interface EmployerRegistrationResponse {
     name: string;
     email: string;
     business_registration_url: string;
+    business_registration_no: string;
     registered_address: string;
     contact?: string | null;
     slug?: string | null;

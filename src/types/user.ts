@@ -47,7 +47,7 @@ export interface Candidate {
   personal_website?: string | null;
   nic?: string | null;
   passport?: string | null;
-  membership_no: number;
+  membership_no: string;
   remote_preference?: 'remote_only' | 'hybrid' | 'onsite' | 'flexible' | null;
   experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal' | null;
   years_of_experience?: number | null;
@@ -107,6 +107,9 @@ export interface Company {
   contact?: string | null;
   slug: string;
   description?: string | null;
+  business_registration_no?: string | null;
+  business_registration_url?: string | null;
+  registered_address?: string | null;
   website?: string | null;
   logo_url?: string | null;
   industry?: string | null;

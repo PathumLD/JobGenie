@@ -1,26 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { createTransporter, createVerificationEmail } from '@/lib/email';
+import bcrypt from 'bcryptjs';
+import { PrismaClient } from '@prisma/client';
 import { uploadBusinessRegistration, ensureBucketExists } from '@/lib/supabase';
-import type { EmployerRegistrationResponse, ApiErrorResponse } from '@/types/api';
+import { createTransporter, createVerificationEmail } from '@/lib/email';
 
 const prisma = new PrismaClient();
 
 // Validation schema for employer registration
 const employerRegistrationSchema = z.object({
-  // Company fields (only essential fields)
   company_name: z.string().min(1, 'Company name is required').max(200, 'Company name must be less than 200 characters'),
-  business_registration_no: z.string().min(1, 'Business registration number is required'),
-  business_registration_certificate: z.instanceof(File).refine((file) => file.size > 0, 'Business registration certificate is required'),
+  business_registration_no: z.string().min(1, 'Business registration number is required').max(20, 'Business registration number must be less than 20 characters'),
+  business_registration_certificate: z.instanceof(File, { message: 'Business registration certificate is required' }),
   business_registered_address: z.string().min(1, 'Business registered address is required'),
   industry: z.string().min(1, 'Industry is required').max(100, 'Industry must be less than 100 characters'),
-  
-  // Employer fields (only essential fields)
   first_name: z.string().min(1, 'First name is required').max(100, 'First name must be less than 100 characters'),
   last_name: z.string().min(1, 'Last name is required').max(100, 'Last name must be less than 100 characters'),
-  email: z.string().email('Invalid employer email format').max(255, 'Employer email must be less than 255 characters'),
+  email: z.string().email('Invalid email address').max(255, 'Email must be less than 255 characters'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirm_password: z.string().min(1, 'Please confirm your password')
 }).refine((data) => data.password === data.confirm_password, {
@@ -28,12 +24,12 @@ const employerRegistrationSchema = z.object({
   path: ["confirm_password"]
 });
 
-export async function POST(request: NextRequest): Promise<NextResponse<EmployerRegistrationResponse | ApiErrorResponse>> {
+export async function POST(request: NextRequest) {
   try {
-    // Parse FormData instead of JSON
+    // Parse multipart form data
     const formData = await request.formData();
     
-    // Extract and validate form data (only essential fields)
+    // Extract fields from form data
     const company_name = formData.get('company_name') as string;
     const business_registration_no = formData.get('business_registration_no') as string;
     const business_registration_certificate = formData.get('business_registration_certificate') as File;
@@ -44,9 +40,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmployerR
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const confirm_password = formData.get('confirm_password') as string;
-    
+
     // Validate the data
-    const validationData = {
+    const validationResult = employerRegistrationSchema.safeParse({
       company_name,
       business_registration_no,
       business_registration_certificate,
@@ -57,100 +53,97 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmployerR
       email,
       password,
       confirm_password
-    };
-    
-    const validationResult = employerRegistrationSchema.safeParse(validationData);
+    });
+
     if (!validationResult.success) {
-      const errorDetails = validationResult.error.issues.map(issue => ({
-        code: issue.code,
-        message: issue.message,
-        path: issue.path.map(p => typeof p === 'string' ? p : String(p))
-      }));
-      
-      return NextResponse.json(
-        { 
-          error: 'Validation failed', 
-          details: errorDetails 
-        }, 
-        { status: 400 }
-      );
+      return NextResponse.json({
+        error: 'Validation failed',
+        details: validationResult.error.issues.map(issue => ({
+          code: issue.code,
+          message: issue.message,
+          path: issue.path.map(p => typeof p === 'string' ? p : String(p))
+        }))
+      }, { status: 400 });
     }
 
-    const data = validationResult.data;
+    const {
+      business_registration_certificate: certificateFile,
+      password: _password, // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      confirm_password: _confirmPassword, // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      ...validatedData
+    } = validationResult.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email }
+      where: { email }
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
+      return NextResponse.json({
+        error: 'User already exists',
+        message: 'An account with this email already exists'
+      }, { status: 409 });
     }
 
-    // Check if company already exists (by business registration number)
-    const existingCompany = await prisma.company.findFirst({
-      where: {
-        business_registration_no: data.business_registration_no
-      }
+    // Check if company already exists with the same business registration number
+    const existingCompany = await prisma.company.findUnique({
+      where: { business_registration_no }
     });
 
     if (existingCompany) {
-      return NextResponse.json(
-        { error: 'A company with this business registration number already exists' },
-        { status: 409 }
-      );
+      return NextResponse.json({
+        error: 'Company already exists',
+        message: 'A company with this business registration number already exists'
+      }, { status: 409 });
     }
 
+    // Ensure Supabase storage bucket exists
+    await ensureBucketExists();
+
     // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, 12);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user, company, and employer in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Generate 6-digit verification token
-      const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
-      const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    // Generate email verification token
+    const verificationToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-      // Create user record first
+    // Create user, company, and employer records in a transaction
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await prisma.$transaction(async (tx: any) => {
+      // Create user record
       const user = await tx.user.create({
         data: {
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email: data.email,
+          first_name,
+          last_name,
+          email,
           password: hashedPassword,
           role: 'employer',
           status: 'pending_verification',
           email_verified: false,
           email_verification_token: verificationToken,
-          verification_token_expires_at: tokenExpiry,
+          verification_token_expires_at: tokenExpiresAt,
           is_created: true
         }
       });
 
-      // Ensure storage bucket exists before uploading
-      await ensureBucketExists();
-
-      // Upload business registration document to Supabase storage
+      // Upload business registration certificate to Supabase
       const businessRegistrationUrl = await uploadBusinessRegistration(
-        data.business_registration_certificate,
-        data.company_name,
+        certificateFile,
+        company_name,
         user.id
       );
 
       // Create company record
       const company = await tx.company.create({
         data: {
-          name: data.company_name,
-          email: data.email, // Use employer's email as company email
-          business_registration_no: data.business_registration_no,
+          name: company_name,
+          email, // Use employer's email as company email
+          business_registration_no,
           business_registration_url: businessRegistrationUrl,
-          registered_address: data.business_registered_address,
-          industry: data.industry,
+          registered_address: business_registered_address,
+          industry,
           company_size: 'startup', // Default value
-          company_type: 'corporation', // Default value
-          verification_status: 'pending'
+          company_type: 'corporation' // Default value
         }
       });
 
@@ -159,59 +152,83 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmployerR
         data: {
           user_id: user.id,
           company_id: company.id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          role: 'company_admin', // Default role for first employer
-          is_primary_contact: true, // First employer is always primary contact
+          first_name,
+          last_name,
+          role: 'company_admin', // Default role for the first employer
+          is_primary_contact: true, // First employer is primary contact
           is_verified: false
         }
       });
 
-      return { user, company, employer, verificationToken };
+      return { user, company, employer };
     });
 
     // Send verification email
     try {
       const transporter = createTransporter();
-      const mailOptions = createVerificationEmail(
-        data.email, 
-        result.verificationToken, 
-        data.first_name
-      );
-
+      const mailOptions = createVerificationEmail(email, verificationToken, first_name);
       await transporter.sendMail(mailOptions);
     } catch (emailError) {
-      console.error('Verification email sending error:', emailError);
-      // Don't fail registration if email fails, but log the error
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail the registration if email fails
     }
 
-    // Remove sensitive information from response
-    const { password: _password, ...userWithoutPassword } = result.user;
-
-    return NextResponse.json(
-      {
-        message: 'Employer registered successfully. Please check your email to verify your account.',
-        user: userWithoutPassword,
-        company: result.company,
-        employer: result.employer
-      } as EmployerRegistrationResponse,
-      { status: 201 }
-    );
+    // Return success response
+    return NextResponse.json({
+      message: 'Employer registration successful. Please check your email for verification.',
+      user: {
+        id: result.user.id,
+        first_name: result.user.first_name,
+        last_name: result.user.last_name,
+        email: result.user.email,
+        role: result.user.role,
+        status: result.user.status,
+        email_verified: result.user.email_verified,
+        created_at: result.user.created_at,
+        updated_at: result.user.updated_at,
+        is_created: result.user.is_created
+      },
+      company: {
+        id: result.company.id,
+        name: result.company.name,
+        email: result.company.email,
+        business_registration_url: result.company.business_registration_url,
+        business_registration_no: result.company.business_registration_no,
+        registered_address: result.company.registered_address,
+        industry: result.company.industry,
+        company_size: result.company.company_size,
+        company_type: result.company.company_type,
+        verification_status: result.company.verification_status,
+        created_at: result.company.created_at,
+        updated_at: result.company.updated_at
+      },
+      employer: {
+        user_id: result.employer.user_id,
+        company_id: result.employer.company_id,
+        first_name: result.employer.first_name,
+        last_name: result.employer.last_name,
+        role: result.employer.role,
+        is_primary_contact: result.employer.is_primary_contact,
+        is_verified: result.employer.is_verified,
+        created_at: result.employer.created_at,
+        updated_at: result.employer.updated_at
+      }
+    }, { status: 201 });
 
   } catch (error) {
     console.error('Employer registration error:', error);
     
     if (error instanceof Error) {
-      return NextResponse.json(
-        { error: 'Internal server error', message: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        error: 'Registration failed',
+        message: error.message
+      }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: 'Registration failed',
+      message: 'An unexpected error occurred during registration'
+    }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

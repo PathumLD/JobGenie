@@ -94,7 +94,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user and candidate in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await prisma.$transaction(async (tx: any) => {
       // Generate 6-digit verification token
       const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
       const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
@@ -157,7 +158,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
     }
 
     // Remove sensitive information from response
-    const { password: _unused, ...userWithoutPassword } = result.user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _unusedPassword, ...userWithoutPassword } = result.user;
 
     return NextResponse.json(
       {

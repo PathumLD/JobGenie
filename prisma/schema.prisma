@@ -933,7 +933,7 @@ model Company {
   id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                  String              @db.VarChar(200)
   email                 String
-  business_registration_no  String
+  business_registration_no  String          @unique  @db.VarChar(20)
   business_registration_url  String
   registered_address    String
   contact               String?             @db.VarChar(20)

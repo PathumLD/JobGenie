@@ -475,7 +475,7 @@ export async function POST(request: NextRequest) {
         
         extractedData = JSON.parse(cleanedText);
         console.log('✅ JSON parsed successfully');
-      } catch (parseError) {
+      } catch (error) {
         console.error('❌ Failed to parse AI response:', text);
         throw new Error('Invalid AI response format');
       }

@@ -1,0 +1,100 @@
+### Test CV Data Extraction API
+
+# Variables
+@baseUrl = http://localhost:3000
+@token = your_jwt_token_here
+
+### 1. Extract CV Data (Resume Upload + AI Processing)
+POST {{baseUrl}}/api/candidate/profile/extract-cv
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 2. Test with Invalid File Type
+POST {{baseUrl}}/api/candidate/profile/extract-cv
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="resume.txt"
+Content-Type: text/plain
+
+This is a text file, not a PDF
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 3. Test without File
+POST {{baseUrl}}/api/candidate/profile/extract-cv
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 4. Test with Invalid Token
+POST {{baseUrl}}/api/candidate/profile/extract-cv
+Authorization: Bearer invalid_token_here
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 5. Test without Authorization
+POST {{baseUrl}}/api/candidate/profile/extract-cv
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 6. Test with Wrong Role (if you have an employer token)
+POST {{baseUrl}}/api/candidate/profile/extract-cv
+Authorization: Bearer employer_token_here
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Notes:
+# 1. Replace {{token}} with a valid JWT token for a candidate user
+# 2. For resume upload, you need an actual PDF file in the same directory
+# 3. This API ONLY extracts data - it does NOT create any database records
+# 4. All extracted data will be displayed in the console
+# 5. The response contains the extracted data ready for form population
+# 6. File must be PDF format and under 10MB
+# 7. Check your server console for detailed extraction logs
+
+### Expected Response Structure:
+# The API will return:
+# - success: true/false
+# - message: Description of the operation
+# - data.extracted_data: Complete extracted CV data
+# - data.file_info: Information about the uploaded file
+# - data.extraction_summary: Count of extracted items by category
+
+### Console Output:
+# The API will log detailed information to the console including:
+# - Basic information (name, title, contact details)
+# - Work experience details
+# - Education information
+# - Skills and proficiency levels
+# - Projects and technologies
+# - Certificates and awards
+# - Volunteering experience
+# - Language proficiencies
+# - Accomplishments

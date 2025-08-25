@@ -10,10 +10,11 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.23.0",
     "@prisma/client": "^6.14.0",
     "@radix-ui/react-slot": "^1.2.3",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.55.0",
+    "@supabase/supabase-js": "^2.56.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^7.0.1",

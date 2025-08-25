@@ -1,0 +1,315 @@
+### Test Candidate Profile Update API
+
+# Variables
+@baseUrl = http://localhost:3000
+@token = your_jwt_token_here
+
+### 1. Update Profile with Image Upload
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileImage"; filename="profile.jpg"
+Content-Type: image/jpeg
+
+< ./profile.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "title": "Senior Software Engineer",
+    "current_position": "Lead Developer",
+    "industry": "Technology",
+    "bio": "Experienced software engineer with 6+ years in web development and team leadership",
+    "about": "Passionate about creating scalable web applications, mentoring junior developers, and leading technical teams",
+    "country": "United States",
+    "city": "New York",
+    "location": "New York, NY",
+    "address": "123 Main St, New York, NY 10001",
+    "phone1": "+1234567890",
+    "phone2": "+0987654321",
+    "personal_website": "https://johndoe.com",
+    "github_url": "https://github.com/johndoe",
+    "linkedin_url": "https://linkedin.com/in/johndoe",
+    "gender": "male",
+    "date_of_birth": "1990-05-15",
+    "remote_preference": "hybrid",
+    "experience_level": "senior",
+    "years_of_experience": 6,
+    "expected_salary_min": 120000,
+    "expected_salary_max": 150000,
+    "currency": "USD",
+    "availability_status": "available",
+    "availability_date": "2024-01-15",
+    "professional_summary": "Senior software engineer with expertise in full-stack development, team leadership, and system architecture",
+    "total_years_experience": 6.5,
+    "open_to_relocation": true,
+    "willing_to_travel": true,
+    "security_clearance": false,
+    "pronouns": "he/him",
+    "salary_visibility": "range_only",
+    "notice_period": 30,
+    "work_authorization": "citizen",
+    "visa_assistance_needed": false,
+    "work_availability": "full_time",
+    "interview_ready": true,
+    "pre_qualified": true
+  },
+  "work_experiences": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Senior Software Engineer",
+      "company": "Tech Corp",
+      "employment_type": "full_time",
+      "is_current": true,
+      "start_date": "2022-01-01",
+      "end_date": null,
+      "location": "New York, NY",
+      "description": "Leading development of microservices architecture and mentoring junior developers",
+      "skill_ids": ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"],
+      "media_url": null
+    },
+    {
+      "title": "Software Engineer",
+      "company": "Startup Inc",
+      "employment_type": "full_time",
+      "is_current": false,
+      "start_date": "2020-03-01",
+      "end_date": "2021-12-31",
+      "location": "San Francisco, CA",
+      "description": "Developed full-stack web applications using React and Node.js",
+      "skill_ids": ["550e8400-e29b-41d4-a716-446655440003", "550e8400-e29b-41d4-a716-446655440004"],
+      "media_url": null
+    }
+  ],
+  "educations": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440005",
+      "degree_diploma": "Bachelor of Science",
+      "university_school": "University of Technology",
+      "field_of_study": "Computer Science",
+      "start_date": "2016-09-01",
+      "end_date": "2020-05-01",
+      "grade": "3.8/4.0",
+      "activities_societies": "Computer Science Club, Hackathon Team",
+      "skill_ids": ["550e8400-e29b-41d4-a716-446655440006"],
+      "media_url": null
+    }
+  ],
+  "skills": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440007",
+      "name": "JavaScript",
+      "category": "Programming Languages",
+      "description": "Advanced JavaScript with ES6+ features",
+      "proficiency": 95
+    },
+    {
+      "name": "React",
+      "category": "Frontend Frameworks",
+      "description": "Modern React with hooks and context",
+      "proficiency": 90
+    },
+    {
+      "name": "Node.js",
+      "category": "Backend Technologies",
+      "description": "Server-side JavaScript development",
+      "proficiency": 85
+    }
+  ],
+  "languages": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440008",
+      "language": "English",
+      "is_native": true,
+      "oral_proficiency": "native",
+      "written_proficiency": "native"
+    },
+    {
+      "language": "Spanish",
+      "is_native": false,
+      "oral_proficiency": "conversational",
+      "written_proficiency": "basic"
+    }
+  ]
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 2. Update Profile without Image (Text Only)
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "title": "Senior Software Engineer",
+    "current_position": "Lead Developer",
+    "industry": "Technology",
+    "bio": "Updated bio with more details about leadership experience",
+    "about": "Updated about section with current goals and aspirations",
+    "location": "New York, NY",
+    "phone1": "+1234567890",
+    "years_of_experience": 7,
+    "expected_salary_min": 130000,
+    "expected_salary_max": 160000,
+    "availability_status": "open_to_opportunities",
+    "professional_summary": "Updated professional summary reflecting current expertise and career goals"
+  }
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 3. Update Specific Sections Only
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "work_experiences": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Lead Software Engineer",
+      "company": "Tech Corp",
+      "description": "Updated description with new responsibilities and achievements"
+    }
+  ],
+  "skills": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440007",
+      "proficiency": 98
+    }
+  ]
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 4. Get Current Profile
+GET {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer {{token}}
+
+### 5. Test with Invalid Token
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer invalid_token_here
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "John"
+  }
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 6. Test without Authorization
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "John"
+  }
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 7. Test with Wrong Role (if you have an employer token)
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer employer_token_here
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "John"
+  }
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 8. Test with Invalid Image Type
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileImage"; filename="document.pdf"
+Content-Type: application/pdf
+
+< ./document.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "John"
+  }
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 9. Test with Invalid UUID Format
+PUT {{baseUrl}}/api/candidate/profile/update-profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "work_experiences": [
+    {
+      "id": "invalid-uuid-format",
+      "title": "Lead Software Engineer",
+      "company": "Tech Corp"
+    }
+  ]
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Notes:
+# 1. Replace {{token}} with a valid JWT token for a candidate user
+# 2. For image upload, you need an actual image file in the same directory
+# 3. This API updates existing candidate profiles - profile must exist first
+# 4. All fields are optional - only provided fields will be updated
+# 5. For existing records, provide the 'id' field to update them (must be valid UUID)
+# 6. For new records, omit the 'id' field to create them
+# 7. Image files must be under 5MB and in image format (jpg, png, etc.)
+# 8. Profile completion percentage is automatically calculated
+# 9. Check your server console for detailed update logs
+# 10. UUIDs in test data are examples - replace with actual UUIDs from your database
+
+### Expected Response Structure:
+# The API will return:
+# - success: true/false
+# - message: Description of the operation
+# - data.candidate_id: Updated candidate ID
+# - data.profile: Basic profile information
+# - data.updated_records: IDs of updated/created records
+# - data.profile_image: Image upload status and URL
+
+### Profile Completion Calculation:
+# The API automatically calculates profile completion percentage based on:
+# - Required fields (weight: 2x): first_name, last_name, title, current_position, industry, bio, location, phone1, years_of_experience
+# - Optional fields (weight: 1x): about, country, city, address, phone2, personal_website, github_url, linkedin_url, professional_summary, gender, date_of_birth, remote_preference, experience_level
+# - Profile is marked as completed when percentage >= 80%
+
+### UUID Validation:
+# The API now validates all UUIDs before processing:
+# - Invalid UUIDs are logged and skipped
+# - Only valid UUIDs are processed for updates
+# - New records are created when no ID is provided
+# - UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx

@@ -1,0 +1,161 @@
+### Test Candidate Profile API
+
+# Variables
+@baseUrl = http://localhost:3000
+@token = your_jwt_token_here
+
+### 1. Create Candidate Profile with Resume Upload
+POST {{baseUrl}}/api/candidate/profile/create-profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "title": "Software Engineer",
+    "current_position": "Senior Developer",
+    "industry": "Technology",
+    "bio": "Experienced software engineer with 5+ years in web development",
+    "about": "Passionate about creating scalable web applications and mentoring junior developers",
+    "location": "New York, NY",
+    "phone1": "+1234567890",
+    "phone2": "+0987654321",
+    "personal_website": "https://johndoe.com",
+    "github_url": "https://github.com/johndoe",
+    "linkedin_url": "https://linkedin.com/in/johndoe",
+    "portfolio_url": "https://portfolio.johndoe.com",
+    "years_of_experience": 5
+  },
+  "work_experiences": [
+    {
+      "title": "Senior Software Engineer",
+      "company": "Tech Corp",
+      "employment_type": "full_time",
+      "is_current": true,
+      "start_date": "2022-01-01",
+      "end_date": null,
+      "location": "New York, NY",
+      "description": "Leading development of microservices architecture and mentoring junior developers"
+    },
+    {
+      "title": "Software Engineer",
+      "company": "Startup Inc",
+      "employment_type": "full_time",
+      "is_current": false,
+      "start_date": "2020-03-01",
+      "end_date": "2021-12-31",
+      "location": "San Francisco, CA",
+      "description": "Developed full-stack web applications using React and Node.js"
+    }
+  ],
+  "educations": [
+    {
+      "degree_diploma": "Bachelor of Science",
+      "university_school": "University of Technology",
+      "field_of_study": "Computer Science",
+      "start_date": "2016-09-01",
+      "end_date": "2020-05-01",
+      "grade": "3.8/4.0"
+    }
+  ],
+  "skills": [
+    {
+      "name": "JavaScript",
+      "category": "Programming Languages",
+      "proficiency": 90
+    },
+    {
+      "name": "React",
+      "category": "Frontend Frameworks",
+      "proficiency": 85
+    },
+    {
+      "name": "Node.js",
+      "category": "Backend Technologies",
+      "proficiency": 80
+    }
+  ]
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 2. Create Candidate Profile without Resume (Manual Data Only)
+POST {{baseUrl}}/api/candidate/profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="profileData"
+
+{
+  "basic_info": {
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "title": "Product Manager",
+    "current_position": "Senior Product Manager",
+    "industry": "Technology",
+    "bio": "Strategic product manager with expertise in SaaS products",
+    "about": "Passionate about user experience and data-driven decision making",
+    "location": "San Francisco, CA",
+    "phone1": "+1555123456",
+    "personal_website": "https://janesmith.com",
+    "linkedin_url": "https://linkedin.com/in/janesmith",
+    "years_of_experience": 7
+  }
+}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 3. Update Candidate Profile
+PUT {{baseUrl}}/api/candidate/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "profileData": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "title": "Senior Software Engineer",
+    "current_position": "Lead Developer",
+    "industry": "Technology",
+    "bio": "Experienced software engineer with 6+ years in web development and team leadership",
+    "about": "Passionate about creating scalable web applications, mentoring junior developers, and leading technical teams",
+    "location": "New York, NY",
+    "phone1": "+1234567890",
+    "phone2": "+0987654321",
+    "personal_website": "https://johndoe.com",
+    "github_url": "https://github.com/johndoe",
+    "linkedin_url": "https://linkedin.com/in/johndoe",
+    "years_of_experience": 6
+  }
+}
+
+### 4. Get Candidate Profile
+GET {{baseUrl}}/api/candidate/profile
+Authorization: Bearer {{token}}
+
+### 5. Test with Invalid Token
+GET {{baseUrl}}/api/candidate/profile
+Authorization: Bearer invalid_token_here
+
+### 6. Test without Authorization
+GET {{baseUrl}}/api/candidate/profile
+
+### 7. Test with Wrong Role (if you have an employer token)
+GET {{baseUrl}}/api/candidate/profile
+Authorization: Bearer employer_token_here
+
+### Notes:
+# 1. Replace {{token}} with a valid JWT token for a candidate user
+# 2. For resume upload, you need an actual PDF file in the same directory
+# 3. The API supports both resume upload + AI extraction and manual profile creation
+# 4. All dates should be in YYYY-MM-DD format
+# 5. Employment types must be one of: full_time, part_time, contract, internship, freelance, volunteer
+# 6. Skills proficiency is on a scale of 0-100

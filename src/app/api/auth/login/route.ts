@@ -5,6 +5,11 @@ import { z } from 'zod';
 import type { UserLoginResponse, ApiErrorResponse } from '@/types/api';
 import { generateAccessToken, generateRefreshToken, setJWTCookies } from '@/lib/jwt';
 
+// Type guard to check if profile has membership_no
+function hasMembershipNo(profile: unknown): profile is { membership_no: string | number } {
+  return profile !== null && typeof profile === 'object' && 'membership_no' in profile;
+}
+
 const prisma = new PrismaClient();
 
 // Validation schema for user login
@@ -117,7 +122,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      membership_no: userType === 'candidate' && profile && 'membership_no' in profile ? (profile as { membership_no: string }).membership_no : undefined,
+      membership_no: userType === 'candidate' && profile && hasMembershipNo(profile) ? String(profile.membership_no) : undefined,
       role: user.role as 'candidate' | 'employer' | 'mis' | 'recruitment_agency',
       userType: userType
     };

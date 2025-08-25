@@ -60,6 +60,34 @@ export async function GET(request: NextRequest): Promise<NextResponse<ProfileRes
       );
     }
 
+    // Transform profile data to ensure type compatibility
+    let transformedProfile: ProfileResponse['profile'] = undefined;
+    
+    if (profile) {
+      if (userType === 'candidate' && user.candidate) {
+        // Transform candidate profile to ensure membership_no is string
+        transformedProfile = {
+          ...user.candidate,
+          membership_no: user.candidate.membership_no ? String(user.candidate.membership_no) : undefined,
+          // Ensure all other fields match the expected types
+          user_id: user.candidate.user_id,
+          saved_job: user.candidate.saved_job || [],
+          saved_jobs_metadata: user.candidate.saved_jobs_metadata || {}
+        };
+      } else if (userType === 'employer' && user.employer) {
+        // Transform employer profile
+        transformedProfile = {
+          company_id: user.employer.company_id,
+          job_title: user.employer.job_title,
+          department: user.employer.department,
+          employer_role: user.employer.role,
+          permissions: user.employer.permissions,
+          is_primary_contact: user.employer.is_primary_contact,
+          phone_extension: user.employer.phone_extension
+        };
+      }
+    }
+
     return NextResponse.json(
       {
         message: 'Profile retrieved successfully',
@@ -79,7 +107,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ProfileRes
           updated_at: user.updated_at,
           is_created: user.is_created
         },
-        profile: profile || undefined,
+        profile: transformedProfile,
         user_type: userType
       },
       { status: 200 }

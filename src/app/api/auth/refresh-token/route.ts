@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { RefreshTokenRequest, RefreshTokenResponse, ApiErrorResponse } from '@/types/api';
+import type { RefreshTokenResponse, ApiErrorResponse } from '@/types/api';
 import { verifyToken, generateAccessToken, generateRefreshToken, setJWTCookies } from '@/lib/jwt';
 
 // Validation schema for refresh token request

@@ -604,40 +604,6 @@ model Resume {
   @@map("resume")
 }
 
-model Company {
-  id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                  String              @db.VarChar(200)
-  email                 String?
-  contact               String?             @db.VarChar(20)
-  slug                  String              @unique @db.VarChar(200)
-  description           String?
-  website               String?
-  logo_url              String?
-  industry              String?             @db.VarChar(100)
-  company_size          CompanySize
-  headquarters_location String?             @db.VarChar(200)
-  founded_year          Int?
-  company_type          CompanyType         @default(corporation)
-  remote_friendly       Boolean             @default(false)
-  benefits              String?
-  culture_description   String?
-  social_media_links    Json?
-  verification_status   VerificationStatus  @default(pending)
-  verified_at           DateTime?
-  created_at            DateTime            @default(now())
-  updated_at            DateTime            @updatedAt
-  employers             Employer[]
-  jobs                  Job[]               @relation("CompanyJobs")
-  mis_access            MisCompanyAccess[]
-  recruitment_agencies  RecruitmentAgency[]
-
-  @@index([slug])
-  @@index([industry])
-  @@index([company_size])
-  @@index([verification_status])
-  @@map("company")
-}
-
 model MisUser {
   user_id                    String             @id @db.Uuid
   access_level               AccessLevel
@@ -949,6 +915,7 @@ model Employer {
   department         String?      @db.VarChar(100)
   role               EmployerRole
   permissions        Json?
+  is_verified        Boolean      @default(false)
   is_primary_contact Boolean      @default(false)
   phone_extension    String?      @db.VarChar(10)
   created_at         DateTime     @default(now())
@@ -960,6 +927,42 @@ model Employer {
   @@index([company_id])
   @@index([role])
   @@map("employer")
+}
+
+model Company {
+  id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String              @db.VarChar(200)
+  email                 String
+  business_registration_no  String          @unique  @db.VarChar(20)
+  business_registration_url  String
+  registered_address    String
+  contact               String?             @db.VarChar(20)
+  slug                  String?             @unique @db.VarChar(200)
+  description           String?
+  website               String?
+  logo_url              String?
+  industry              String              @db.VarChar(100)
+  company_size          CompanySize
+  headquarters_location String?             @db.VarChar(200)
+  founded_year          Int?
+  company_type          CompanyType         @default(corporation)
+  benefits              String?
+  culture_description   String?
+  social_media_links    Json?
+  verification_status   VerificationStatus  @default(pending)
+  verified_at           DateTime?
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+  employers             Employer[]
+  jobs                  Job[]               @relation("CompanyJobs")
+  mis_access            MisCompanyAccess[]
+  recruitment_agencies  RecruitmentAgency[]
+
+  @@index([slug])
+  @@index([industry])
+  @@index([company_size])
+  @@index([verification_status])
+  @@map("company")
 }
 
 model RecruitmentAgency {

@@ -61,7 +61,7 @@ export interface CandidateRegistrationResponse {
     personal_website?: string | null;
     nic?: string | null;
     passport?: string | null;
-         membership_no: string;
+    membership_no: string;
     remote_preference?: 'remote_only' | 'hybrid' | 'onsite' | 'flexible' | null;
     experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal' | null;
     years_of_experience?: number | null;
@@ -162,7 +162,7 @@ export interface UserLoginResponse {
     personal_website?: string | null;
     nic?: string | null;
     passport?: string | null;
-    membership_no?: number;
+    membership_no?: string;
     remote_preference?: 'remote_only' | 'hybrid' | 'onsite' | 'flexible' | null;
     experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal' | null;
     years_of_experience?: number | null;
@@ -334,4 +334,91 @@ export interface VerifyEmailTokenResponse {
   message: string;
   email_verified: boolean;
   user_id: string;
+}
+
+// Employer Registration Request
+export interface EmployerRegistrationRequest {
+  // Company fields (only essential fields)
+  company_name: string;
+  business_registration_no: string; // Business registration number for uniqueness
+  business_registration_certificate: File; // File upload for business registration
+  business_registered_address: string;
+  industry: string;
+  
+  // Employer fields (only essential fields)
+  first_name: string;
+  last_name: string;
+  email: string; // Employer's personal email
+  password: string;
+  confirm_password: string;
+}
+
+// Employer Registration Response
+export interface EmployerRegistrationResponse {
+  message: string;
+  user: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    address?: string | null;
+    phone1?: string | null;
+    phone2?: string | null;
+    email: string;
+    role?: 'candidate' | 'employer' | 'mis' | 'recruitment_agency' | null;
+    status?: 'active' | 'inactive' | 'suspended' | 'pending_verification' | null;
+    email_verified?: boolean | null;
+    email_verification_token?: string | null;
+    email_verification_token_expires_at?: Date | null;
+    password_reset_token?: string | null;
+    password_reset_expires_at?: Date | null;
+    provider?: string | null;
+    provider_id?: string | null;
+    last_login_at?: Date | null;
+    created_at?: Date | null;
+    updated_at?: Date | null;
+    deleted_at?: Date | null;
+    is_created: boolean;
+  };
+  company: {
+    id: string;
+    name: string;
+    email: string;
+    business_registration_url: string;
+    business_registration_no: string;
+    registered_address: string;
+    contact?: string | null;
+    slug?: string | null;
+    description?: string | null;
+    website?: string | null;
+    logo_url?: string | null;
+    industry: string;
+    company_size: 'startup' | 'one_to_ten' | 'eleven_to_fifty' | 'fifty_one_to_two_hundred' | 'two_hundred_one_to_five_hundred' | 'five_hundred_one_to_one_thousand' | 'one_thousand_plus';
+    headquarters_location?: string | null;
+    founded_year?: number | null;
+    company_type: 'startup' | 'corporation' | 'agency' | 'non_profit' | 'government';
+    benefits?: string | null;
+    culture_description?: string | null;
+    social_media_links?: unknown;
+    verification_status: 'pending' | 'verified' | 'rejected';
+    verified_at?: Date | null;
+    created_at: Date;
+    updated_at: Date;
+  };
+  employer: {
+    user_id: string;
+    company_id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    job_title?: string | null;
+    department?: string | null;
+    role: 'recruiter' | 'hiring_manager' | 'hr_admin' | 'company_admin';
+    permissions?: unknown;
+    is_verified: boolean;
+    is_primary_contact: boolean;
+    phone_extension?: string | null;
+    created_at: Date;
+    updated_at: Date;
+  };
 }

@@ -712,3 +712,204 @@ export async function POST(request: NextRequest) {
   // Your API logic here
 }
 ```
+
+## Employer Registration API
+
+### Endpoint
+`POST /api/auth/register-employer`
+
+### Description
+Registers a new employer user and their associated company in the system. The registration data is split across three tables:
+- **User table**: Basic user information (email, password, role, status)
+- **Company table**: Company information (name, business registration, address, industry)
+- **Employer table**: Employer-specific information (role, permissions, company association)
+
+### Request Body
+**Content-Type**: `multipart/form-data` (for file upload)
+
+```form-data
+company_name: "string (required, max 200 chars)"
+business_registration_no: "string (required, max 20 chars, unique)"
+business_registration_certificate: "File (required, PDF/DOC/DOCX/JPEG/PNG, max 10MB)"
+business_registered_address: "string (required)"
+industry: "string (required, max 100 chars)"
+first_name: "string (required, max 100 chars)"
+last_name: "string (required, max 100 chars)"
+email: "string (required, valid email format, max 255 chars, unique)"
+password: "string (required, min 8 chars)"
+confirm_password: "string (required, must match password)"
+```
+
+### Response
+
+#### Success Response (201 Created)
+```json
+{
+  "message": "Employer registration successful. Please check your email for verification.",
+  "user": {
+    "id": "uuid",
+    "first_name": "string",
+    "last_name": "string",
+    "email": "string",
+    "role": "employer",
+    "status": "pending_verification",
+    "email_verified": false,
+    "is_created": true,
+    "created_at": "datetime",
+    "updated_at": "datetime"
+  },
+  "company": {
+    "id": "uuid",
+    "name": "string",
+    "email": "string",
+    "business_registration_url": "string",
+    "business_registration_no": "string",
+    "registered_address": "string",
+    "industry": "string",
+    "company_size": "startup",
+    "company_type": "corporation",
+    "verification_status": "pending",
+    "created_at": "datetime",
+    "updated_at": "datetime"
+  },
+  "employer": {
+    "user_id": "uuid",
+    "company_id": "uuid",
+    "first_name": "string",
+    "last_name": "string",
+    "role": "company_admin",
+    "is_primary_contact": true,
+    "is_verified": false,
+    "created_at": "datetime",
+    "updated_at": "datetime"
+  }
+}
+```
+
+#### Error Responses
+
+**400 Bad Request - Validation Error**
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    {
+      "code": "invalid_string",
+      "message": "Company name is required",
+      "path": ["company_name"]
+    }
+  ]
+}
+```
+
+**409 Conflict - User Already Exists**
+```json
+{
+  "error": "User already exists",
+  "message": "An account with this email already exists"
+}
+```
+
+**409 Conflict - Company Already Exists**
+```json
+{
+  "error": "Company already exists",
+  "message": "A company with this business registration number already exists"
+}
+```
+
+**500 Internal Server Error**
+```json
+{
+  "error": "Registration failed",
+  "message": "Error details"
+}
+```
+
+### Features
+
+1. **Data Validation**: Comprehensive validation using Zod schema
+2. **Password Security**: Passwords are hashed using bcrypt with salt rounds of 12
+3. **Transaction Safety**: User, Company, and Employer records are created in a single database transaction
+4. **Duplicate Prevention**: 
+   - Checks for existing users by email
+   - Checks for existing companies by business registration number
+5. **File Upload**: Business registration certificate uploaded to Supabase Storage
+6. **Automatic Bucket Creation**: Creates storage bucket if it doesn't exist
+7. **Email Verification**: Sends 6-digit verification code after successful registration
+8. **Default Values**: Sets sensible defaults for company size, type, and employer role
+
+### Database Tables Used
+
+- **user**: Stores basic user information and authentication details
+- **company**: Stores company information and business registration details
+- **employer**: Stores employer-specific information linked to user and company
+
+### File Upload Details
+
+- **Storage**: Supabase Storage
+- **Bucket**: `business-registration`
+- **File Types**: PDF, DOC, DOCX, JPEG, PNG
+- **Size Limit**: 10MB
+- **Access**: Public read access
+- **Naming**: `{company_name}_{user_id}_{timestamp}.{extension}`
+
+### Security Features
+
+- Password hashing with bcrypt
+- Input validation and sanitization
+- SQL injection prevention through Prisma ORM
+- File type and size validation
+- Proper error handling without exposing sensitive information
+- Business registration number uniqueness validation
+- Email uniqueness validation
+
+### Usage Example
+
+#### Using FormData (JavaScript/TypeScript)
+```typescript
+const formData = new FormData();
+formData.append('company_name', 'TechCorp Solutions');
+formData.append('business_registration_no', 'BR123456789');
+formData.append('business_registration_certificate', fileInput.files[0]);
+formData.append('business_registered_address', '123 Business St, City');
+formData.append('industry', 'Technology');
+formData.append('first_name', 'John');
+formData.append('last_name', 'Smith');
+formData.append('email', 'john.smith@techcorp.com');
+formData.append('password', 'securepassword123');
+formData.append('confirm_password', 'securepassword123');
+
+const response = await fetch('/api/auth/register-employer', {
+  method: 'POST',
+  body: formData
+});
+
+const data = await response.json();
+```
+
+#### Using cURL
+```bash
+curl -X POST "http://localhost:3000/api/auth/register-employer" \
+  -H "Content-Type: multipart/form-data" \
+  -F "company_name=TechCorp Solutions" \
+  -F "business_registration_no=BR123456789" \
+  -F "business_registration_certificate=@./business_registration.pdf" \
+  -F "business_registered_address=123 Business St, City" \
+  -F "industry=Technology" \
+  -F "first_name=John" \
+  -F "last_name=Smith" \
+  -F "email=john.smith@techcorp.com" \
+  -F "password=securepassword123" \
+  -F "confirm_password=securepassword123"
+```
+
+### Notes
+
+- The API automatically handles the relationship between User, Company, and Employer tables
+- Email verification is set to false by default and status is set to 'pending_verification'
+- A verification email is automatically sent after successful registration
+- The first employer is automatically set as 'company_admin' and 'primary_contact'
+- Company size defaults to 'startup' and company type defaults to 'corporation'
+- All timestamps are automatically managed by Prisma
+- File uploads are handled securely with proper validation and storage

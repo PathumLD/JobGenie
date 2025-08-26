@@ -28,11 +28,11 @@ interface ResumeUploadData {
 
 // Helper function to upload resume to Supabase storage
 async function uploadResume(file: File, candidateId: string): Promise<{ filePath: string; publicUrl: string }> {
-  const fileExt = file.name.split('.').pop();
+  // const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}_${file.name}`;
   const filePath = `candidate_resume/${candidateId}/${fileName}`;
   
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('candidate_resume')
     .upload(filePath, file, {
       cacheControl: '3600',
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     // 2. Parse form data
     const formData = await request.formData();
     const resumeFile = formData.get('resumeFile') as File | null;
-    const resumeData = formData.get('resumeData') as string | null;
+    // const resumeData = formData.get('resumeData') as string | null;
 
     if (!resumeFile) {
       return NextResponse.json(
@@ -142,19 +142,19 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Parse resume data if provided
-    let uploadData: ResumeUploadData = {};
-    if (resumeData) {
-      try {
-        uploadData = JSON.parse(resumeData);
-        console.log('✅ Resume data parsed successfully');
-      } catch (parseError) {
-        console.error('❌ Failed to parse resume data:', parseError);
-        return NextResponse.json(
-          { error: 'Invalid resume data format' },
-          { status: 400 }
-        );
-      }
-    }
+    const uploadData: ResumeUploadData = {};
+    // if (resumeData) {
+    //   try {
+    //     uploadData = JSON.parse(resumeData);
+    //     console.log('✅ Resume data parsed successfully');
+    //   } catch (parseError) {
+    //     console.error('❌ Failed to parse resume data:', parseError);
+    //     return NextResponse.json(
+    //       { error: 'Invalid resume data format' },
+    //       { status: 400 }
+    //     );
+    //   }
+    // }
 
     // 5. Check if candidate exists
     const existingCandidate = await prisma.candidate.findUnique({

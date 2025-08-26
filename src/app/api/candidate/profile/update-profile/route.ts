@@ -208,7 +208,7 @@ function calculateProfileCompletion(basicInfo: UpdateBasicInfo): number {
   ];
   
   let completedFields = 0;
-  const totalFields = requiredFields.length + optionalFields.length;
+  // const totalFields = requiredFields.length + optionalFields.length;
   
   // Check required fields (weight: 2x)
   requiredFields.forEach(field => {
@@ -236,7 +236,7 @@ async function uploadProfileImage(file: File, candidateId: string): Promise<stri
   const fileName = `${candidateId}_${Date.now()}.${fileExt}`;
   const filePath = `candidate_profile_image/${fileName}`;
   
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('candidate_profile_image')
     .upload(filePath, file, {
       cacheControl: '3600',

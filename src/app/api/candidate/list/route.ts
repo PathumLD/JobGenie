@@ -60,7 +60,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateL
     });
 
     // Transform the data to include email
-    const candidatesWithEmail = candidates.map(candidate => ({
+    const candidatesWithEmail = candidates.map((candidate: {
+      user_id: string;
+      first_name: string | null;
+      last_name: string | null;
+      nic: string | null;
+      membership_no: string;
+      created_at: Date | null;
+      user: { email: string };
+    }) => ({
       user_id: candidate.user_id,
       first_name: candidate.first_name,
       last_name: candidate.last_name,

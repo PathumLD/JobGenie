@@ -4,8 +4,11 @@ import { Header } from '@/components/public/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserType } from '@/types/user';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter()
+
   const handleUserTypeSelection = (userType: UserType) => {
     // This will be implemented later when we add routing
     console.log(`Selected user type: ${userType}`);
@@ -52,7 +55,10 @@ export default function Home() {
                     experience, and career goals. Get personalized job recommendations and insights.
                   </p>
                   <Button 
-                    onClick={() => handleUserTypeSelection('candidate')}
+                    onClick={() => {
+                      handleUserTypeSelection('candidate')
+                      router.push('/candidate/register')
+                    }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
                     Let&apos;s Get Started

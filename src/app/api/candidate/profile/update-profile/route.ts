@@ -343,8 +343,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 4. Check if candidate exists
-    const existingCandidate = await prisma.candidate.findUnique({
+    // 4. Check if candidate exists, create if not
+    let existingCandidate = await prisma.candidate.findUnique({
       where: { user_id: payload.userId },
       include: {
         work_experiences: true,
@@ -363,10 +363,96 @@ export async function PUT(request: NextRequest) {
       }
     });
 
+    // If candidate doesn't exist, create a basic profile first
     if (!existingCandidate) {
+      console.log('🔄 Candidate profile not found, creating basic profile...');
+      
+      // Import the membership function
+      const { generateMembershipNumberFromUserId } = await import('@/lib/membership');
+      
+      const membershipNo = generateMembershipNumberFromUserId(payload.userId);
+      
+      const newCandidate = await prisma.candidate.create({
+        data: {
+          user_id: payload.userId,
+          first_name: updateData.basic_info?.first_name || null,
+          last_name: updateData.basic_info?.last_name || null,
+          title: updateData.basic_info?.title || null,
+          current_position: updateData.basic_info?.current_position || null,
+          industry: updateData.basic_info?.industry || null,
+          bio: updateData.basic_info?.bio || null,
+          about: updateData.basic_info?.about || null,
+          country: updateData.basic_info?.country || null,
+          city: updateData.basic_info?.city || null,
+          location: updateData.basic_info?.location || null,
+          address: updateData.basic_info?.address || null,
+          phone1: updateData.basic_info?.phone1 || null,
+          phone2: updateData.basic_info?.phone2 || null,
+          personal_website: updateData.basic_info?.personal_website || null,
+          nic: updateData.basic_info?.nic || null,
+          passport: updateData.basic_info?.passport || null,
+          remote_preference: updateData.basic_info?.remote_preference || 'flexible',
+          experience_level: updateData.basic_info?.experience_level || 'entry',
+          years_of_experience: updateData.basic_info?.years_of_experience || 0,
+          expected_salary_min: updateData.basic_info?.expected_salary_min || 0,
+          expected_salary_max: updateData.basic_info?.expected_salary_max || 0,
+          currency: updateData.basic_info?.currency || 'LKR',
+          availability_status: updateData.basic_info?.availability_status || 'available',
+          availability_date: updateData.basic_info?.availability_date ? new Date(updateData.basic_info.availability_date) : null,
+          github_url: updateData.basic_info?.github_url || null,
+          linkedin_url: updateData.basic_info?.linkedin_url || null,
+          professional_summary: updateData.basic_info?.professional_summary || null,
+          total_years_experience: updateData.basic_info?.total_years_experience || 0,
+          open_to_relocation: updateData.basic_info?.open_to_relocation || false,
+          willing_to_travel: updateData.basic_info?.willing_to_travel || false,
+          security_clearance: updateData.basic_info?.security_clearance || false,
+          disability_status: updateData.basic_info?.disability_status || null,
+          veteran_status: updateData.basic_info?.veteran_status || null,
+          pronouns: updateData.basic_info?.pronouns || null,
+          salary_visibility: updateData.basic_info?.salary_visibility || 'confidential',
+          notice_period: updateData.basic_info?.notice_period || 30,
+          work_authorization: updateData.basic_info?.work_authorization || null,
+          visa_assistance_needed: updateData.basic_info?.visa_assistance_needed || false,
+          work_availability: updateData.basic_info?.work_availability || 'full_time',
+          interview_ready: updateData.basic_info?.interview_ready || false,
+          pre_qualified: updateData.basic_info?.pre_qualified || false,
+          profile_completion_percentage: 0,
+          completedProfile: false,
+          membership_no: membershipNo,
+          created_at: new Date(),
+          updated_at: new Date(),
+        }
+      });
+      
+      // Now fetch the complete candidate with all relations
+      existingCandidate = await prisma.candidate.findUnique({
+        where: { user_id: payload.userId },
+        include: {
+          work_experiences: true,
+          educations: true,
+          certificates: true,
+          projects: true,
+          awards: true,
+          volunteering: true,
+          skills: {
+            include: {
+              skill: true
+            }
+          },
+          languages: true,
+          accomplishments: true,
+        }
+      });
+      
+      console.log('✅ Basic candidate profile created:', newCandidate.user_id);
+    }
+
+    // Ensure existingCandidate is not null at this point
+    if (!existingCandidate) {
+      console.error('❌ Failed to create or fetch candidate profile');
       return NextResponse.json(
-        { error: 'Candidate profile not found. Create profile first.' },
-        { status: 404 }
+        { error: 'Failed to create candidate profile' },
+        { status: 500 }
       );
     }
 

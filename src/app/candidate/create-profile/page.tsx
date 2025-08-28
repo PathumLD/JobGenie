@@ -348,7 +348,7 @@ export default function CreateProfilePage() {
          return;
        }
 
-       const loadingToast = toast.loading('Updating your profile...');
+       const loadingToast = toast.loading('Saving your profile...');
       
       // First, upload image if selected
       let imageUrl = formData.basic_info.profile_image_url;
@@ -406,7 +406,7 @@ export default function CreateProfilePage() {
          }
        }
        
-       // Update existing profile using update API
+       // Save profile using update API (creates if doesn't exist)
        const profileFormData = new FormData();
        profileFormData.append('profileData', JSON.stringify(updatedFormData));
        
@@ -428,11 +428,11 @@ export default function CreateProfilePage() {
 
              if (!response.ok) {
          const errorData = await response.json();
-         throw new Error(errorData.error || 'Failed to update profile');
+         throw new Error(errorData.error || 'Failed to save profile');
        }
 
              const result = await response.json();
-       toast.success('Profile updated successfully!');
+       toast.success('Profile saved successfully!');
       
       // Clean up localStorage and preview URL
       if (typeof window !== 'undefined') {
@@ -446,15 +446,15 @@ export default function CreateProfilePage() {
        const recordCounts = result.data.updated_records;
        const totalRecords = Object.values(recordCounts).reduce((sum: number, count: unknown) => sum + (typeof count === 'number' ? count : 0), 0);
        
-       toast.success(`Profile updated with ${totalRecords} records! Redirecting...`);
+       toast.success(`Profile saved with ${totalRecords} records! Redirecting...`);
       
       setTimeout(() => {
         router.push('/candidate/profile');
       }, 3000);
       
          } catch (error) {
-       console.error('Profile update error:', error);
-       toast.error(error instanceof Error ? error.message : 'Failed to update profile');
+       console.error('Profile save error:', error);
+       toast.error(error instanceof Error ? error.message : 'Failed to save profile');
      } finally {
        setIsSubmitting(false);
      }
@@ -1733,7 +1733,7 @@ export default function CreateProfilePage() {
                  <div>
            <h1 className="text-3xl font-bold text-gray-900">Complete Profile</h1>
            <p className="text-gray-600 mt-2">
-             {cvData ? 'Review and complete your profile using extracted CV data' : 'Complete your professional profile'}
+             {cvData ? 'Review and complete your profile using extracted CV data' : 'Complete or update your professional profile'}
            </p>
          </div>
       </div>

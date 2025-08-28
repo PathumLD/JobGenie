@@ -350,6 +350,7 @@ model Candidate {
   pre_qualified                 Boolean?           @default(false)
   profile_completion_percentage Int?               @default(0)
   completedProfile              Boolean?           @default(false)
+  isApproved                    Boolean            @default(false)
   saved_job                     String[]           @default([]) @db.Uuid
   saved_jobs_metadata           Json?              @default("{}")
   created_at                    DateTime?          @default(now())

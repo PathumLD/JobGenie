@@ -26,6 +26,115 @@ interface ResumeUploadData {
   file_type?: string;
 }
 
+// Enhanced duplicate detection function with stricter matching
+async function checkDuplicateData(
+  candidateId: string,
+  dataType: 'work_experience' | 'education' | 'certificate' | 'project' | 'award' | 'volunteering' | 'language' | 'skill',
+  data: any
+): Promise<boolean> {
+  try {
+    switch (dataType) {
+      case 'work_experience':
+        // Stricter work experience duplicate detection
+        const existingWorkExp = await prisma.workExperience.findFirst({
+          where: {
+            candidate_id: candidateId,
+            title: { equals: data.title, mode: 'insensitive' },
+            company: { equals: data.company, mode: 'insensitive' },
+            employment_type: data.employment_type
+          }
+        });
+        return !!existingWorkExp;
+
+      case 'education':
+        // Stricter education duplicate detection
+        const existingEdu = await prisma.education.findFirst({
+          where: {
+            candidate_id: candidateId,
+            degree_diploma: { equals: data.degree_diploma, mode: 'insensitive' },
+            university_school: { equals: data.university_school, mode: 'insensitive' }
+          }
+        });
+        return !!existingEdu;
+
+      case 'certificate':
+        // Stricter certificate duplicate detection
+        const existingCert = await prisma.certificate.findFirst({
+          where: {
+            candidate_id: candidateId,
+            name: { equals: data.name, mode: 'insensitive' },
+            issuing_authority: { equals: data.issuing_authority, mode: 'insensitive' }
+          }
+        });
+        return !!existingCert;
+
+      case 'project':
+        // Stricter project duplicate detection
+        const existingProj = await prisma.project.findFirst({
+          where: {
+            candidate_id: candidateId,
+            name: { equals: data.name, mode: 'insensitive' }
+          }
+        });
+        return !!existingProj;
+
+      case 'award':
+        // Stricter award duplicate detection
+        const existingAward = await prisma.award.findFirst({
+          where: {
+            candidate_id: candidateId,
+            title: { equals: data.title, mode: 'insensitive' },
+            offered_by: { equals: data.offered_by, mode: 'insensitive' }
+          }
+        });
+        return !!existingAward;
+
+      case 'volunteering':
+        // Stricter volunteering duplicate detection
+        const existingVol = await prisma.volunteering.findFirst({
+          where: {
+            candidate_id: candidateId,
+            role: { equals: data.role, mode: 'insensitive' },
+            institution: { equals: data.institution, mode: 'insensitive' }
+          }
+        });
+        return !!existingVol;
+
+      case 'language':
+        // Stricter language duplicate detection
+        const existingLang = await prisma.language.findFirst({
+          where: {
+            candidate_id: candidateId,
+            language: { equals: data.language, mode: 'insensitive' }
+          }
+        });
+        return !!existingLang;
+
+      case 'skill':
+        // Stricter skill duplicate detection
+        const existingSkill = await prisma.candidateSkill.findFirst({
+          where: {
+            candidate_id: candidateId,
+            skill: {
+              name: { equals: data.name, mode: 'insensitive' }
+            }
+          },
+          include: {
+            skill: true
+          }
+        });
+        return !!existingSkill;
+
+      default:
+        return false;
+    }
+  } catch (error) {
+    console.error(`❌ Error in duplicate detection for ${dataType}:`, error);
+    // If error occurs, be conservative and treat as duplicate to prevent data corruption
+    return true;
+  }
+}
+
 // Helper function to upload resume to Supabase storage
 async function uploadResume(file: File, candidateId: string): Promise<{ filePath: string; publicUrl: string }> {
   const fileName = `${Date.now()}_${file.name}`;

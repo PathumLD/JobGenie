@@ -1,104 +1,167 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/jwt';
 
+const prisma = new PrismaClient();
+
+// Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function POST(request: NextRequest) {
+interface UploadImageResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    profile_image_url: string;
+  };
+}
+
+interface UploadImageErrorResponse {
+  success: false;
+  error: 'UNAUTHORIZED' | 'VALIDATION_ERROR' | 'INTERNAL_SERVER_ERROR';
+  message: string;
+}
+
+// POST - Upload profile image
+export async function POST(
+  request: NextRequest
+): Promise<NextResponse<UploadImageResponse | UploadImageErrorResponse>> {
   try {
-    // Verify authentication
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token')?.value;
+    const token = getTokenFromCookies(request);
     
-    if (!accessToken) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Authentication required' },
+        {
+          success: false,
+          error: 'UNAUTHORIZED',
+          message: 'Authentication token required'
+        } as UploadImageErrorResponse,
         { status: 401 }
       );
     }
 
-    const payload = await verifyToken(accessToken);
-    if (!payload || !payload.userId) {
+    const decodedToken = verifyToken(token);
+    
+    if (!decodedToken) {
       return NextResponse.json(
-        { success: false, error: 'Invalid token' },
+        {
+          success: false,
+          error: 'UNAUTHORIZED',
+          message: 'Invalid authentication token'
+        } as UploadImageErrorResponse,
         { status: 401 }
       );
     }
 
+    const userId = decodedToken.userId;
+
+    // Parse the form data
     const formData = await request.formData();
-    const imageFile = formData.get('image') as File;
+    const file = formData.get('profile_image') as File;
 
-    if (!imageFile) {
+    if (!file) {
       return NextResponse.json(
-        { success: false, error: 'No image file provided' },
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Profile image file is required'
+        } as UploadImageErrorResponse,
         { status: 400 }
       );
     }
 
     // Validate file type
-    if (!imageFile.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/')) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Only images are allowed.' },
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'File must be an image'
+        } as UploadImageErrorResponse,
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB limit)
-    if (imageFile.size > 5 * 1024 * 1024) {
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { success: false, error: 'File size too large. Maximum 5MB allowed.' },
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'File size must be less than 5MB'
+        } as UploadImageErrorResponse,
         { status: 400 }
       );
     }
 
     // Convert file to buffer
-    const bytes = await imageFile.arrayBuffer();
+    const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
     // Generate unique filename
-    const fileExtension = imageFile.name.split('.').pop();
-    const fileName = `${payload.userId}_${Date.now()}.${fileExtension}`;
-    const filePath = `profile-images/${payload.userId}/${fileName}`;
+    const timestamp = Date.now();
+    const fileExtension = file.name.split('.').pop();
+    const filename = `profile_${userId}_${timestamp}.${fileExtension}`;
+    const filePath = `profile-images/${userId}/${filename}`;
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('candidate_profile_image')
       .upload(filePath, buffer, {
-        contentType: imageFile.type,
+        contentType: file.type,
         upsert: false,
       });
 
     if (uploadError) {
       console.error('Supabase upload error:', uploadError);
       return NextResponse.json(
-        { success: false, error: 'Failed to upload image' },
+        {
+          success: false,
+          error: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to upload image to storage'
+        } as UploadImageErrorResponse,
         { status: 500 }
       );
     }
 
-    // Get public URL
+    // Get public URL from Supabase
     const { data: urlData } = supabase.storage
       .from('candidate_profile_image')
       .getPublicUrl(filePath);
 
-    const imageUrl = urlData.publicUrl;
+    const profileImageUrl = urlData.publicUrl;
+
+    // Update the candidate's profile_image_url in the database
+    await prisma.candidate.update({
+      where: { user_id: userId },
+      data: {
+        profile_image_url: profileImageUrl
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      imageUrl,
-      fileName,
-      filePath,
+      message: 'Profile image uploaded successfully',
+      data: {
+        profile_image_url: profileImageUrl
+      }
     });
 
   } catch (error) {
     console.error('Error uploading profile image:', error);
+    
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to upload profile image'
+      } as UploadImageErrorResponse,
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

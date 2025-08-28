@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProfileSection } from '@/components/candidate/ProfileSection';
+import { ProfileImageUpload } from '@/components/candidate/ProfileImageUpload';
 import { CandidateProfileResponse, BasicInfoSection } from '@/types/candidate-profile';
 
 export default function CandidateProfilePage() {
   const [profileData, setProfileData] = useState<CandidateProfileResponse['data'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -22,6 +24,11 @@ export default function CandidateProfilePage() {
         
         if (data.success) {
           setProfileData(data.data);
+          // Set the profile image URL from the basic info section
+          const basicInfoSection = data.data.sections.find((s: any) => s.data.type === 'basic_info');
+          if (basicInfoSection?.data?.profile_image_url) {
+            setProfileImageUrl(basicInfoSection.data.profile_image_url);
+          }
         } else {
           if (data.error === 'UNAUTHORIZED') {
             setError('You are not logged in. Please log in to view your profile.');
@@ -86,6 +93,28 @@ export default function CandidateProfilePage() {
   const basicInfoSection = profileData.sections.find(s => s.data.type === 'basic_info');
   const basicInfo = basicInfoSection?.data as BasicInfoSection;
 
+  const handleProfileImageUpdate = (newImageUrl: string) => {
+    setProfileImageUrl(newImageUrl);
+    // Update the profile data with the new image URL
+    if (profileData && basicInfoSection) {
+      const updatedProfileData = {
+        ...profileData,
+        sections: profileData.sections.map(section => 
+          section.id === basicInfoSection.id 
+            ? {
+                ...section,
+                data: {
+                  ...section.data,
+                  profile_image_url: newImageUrl
+                }
+              }
+            : section
+        )
+      };
+      setProfileData(updatedProfileData);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -96,12 +125,6 @@ export default function CandidateProfilePage() {
               <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
               <p className="text-gray-600 mt-2">Professional information and experience</p>
             </div>
-            <Button className="bg-gray-600 hover:bg-gray-700">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit Profile
-            </Button>
           </div>
         </div>
 
@@ -112,22 +135,10 @@ export default function CandidateProfilePage() {
               <div className="flex flex-col lg:flex-row items-start gap-6">
                 {/* Profile Photo Section */}
                 <div className="flex-shrink-0 text-center lg:text-left">
-                  <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto lg:mx-0 mb-4 overflow-hidden">
-                    {basicInfo?.profile_image_url ? (
-                      <img 
-                        src={basicInfo.profile_image_url} 
-                        alt={`${basicInfo.first_name} ${basicInfo.last_name}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-4xl text-gray-600 font-semibold">
-                        {basicInfo?.first_name?.[0]}{basicInfo?.last_name?.[0]}
-                      </span>
-                    )}
-                  </div>
-                  <Button variant="outline" className="w-full lg:w-auto border-gray-600 text-gray-600 hover:bg-gray-50">
-                    Upload Photo
-                  </Button>
+                  <ProfileImageUpload
+                    currentImageUrl={profileImageUrl || basicInfo?.profile_image_url}
+                    onImageUpdate={handleProfileImageUpdate}
+                  />
                 </div>
 
                 {/* Profile Info Section */}

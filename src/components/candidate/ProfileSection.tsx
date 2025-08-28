@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ProfileSectionData } from '@/types/candidate-profile';
+import { ProfileSectionData, BasicInfoSection as BasicInfoSectionType, AboutSection as AboutSectionType, ExperienceSection as ExperienceSectionType, EducationSection as EducationSectionType, SkillsSection as SkillsSectionType, ProjectsSection as ProjectsSectionType, CertificatesSection as CertificatesSectionType, LanguagesSection as LanguagesSectionType, AwardsSection as AwardsSectionType, VolunteeringSection as VolunteeringSectionType, AccomplishmentsSection as AccomplishmentsSectionType } from '@/types/candidate-profile';
+import { EditModal } from './EditModal';
+import { ProfileService } from '@/services/profileService';
+import { Edit, Plus, Trash2 } from 'lucide-react';
 
 interface ProfileSectionProps {
   section: {
@@ -12,174 +15,266 @@ interface ProfileSectionProps {
 }
 
 export const ProfileSection: React.FC<ProfileSectionProps> = ({ section }) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingData, setEditingData] = useState<Record<string, unknown>>({});
+  const [editingId, setEditingId] = useState<string>('');
+
+  const handleEdit = (data: Record<string, unknown>, id: string = '') => {
+    setEditingData(data);
+    setEditingId(id);
+    setIsEditModalOpen(true);
+  };
+
+  const getSectionTypeForAPI = (sectionType: string): string => {
+    switch (sectionType) {
+      case 'basic_info':
+        return 'basic-info';
+      case 'experience':
+        return 'work-experience';
+      default:
+        return sectionType;
+    }
+  };
+
+  const handleSave = async (updatedData: Record<string, unknown>) => {
+    try {
+      const apiSectionType = getSectionTypeForAPI(section.data.type);
+      if (editingId) {
+        // Update existing item
+        await ProfileService.updateSection(apiSectionType, editingId, updatedData);
+      } else {
+        // Create new item
+        await ProfileService.createSection(apiSectionType, updatedData);
+      }
+      // Refresh the page or update local state
+      window.location.reload();
+    } catch (error) {
+      console.error('Error saving data:', error);
+      // Handle error display
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this item?')) {
+      try {
+        const apiSectionType = getSectionTypeForAPI(section.data.type);
+        await ProfileService.deleteSection(apiSectionType, id);
+        window.location.reload();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+      }
+    }
+  };
+
   const renderSectionContent = () => {
     switch (section.data.type) {
       case 'basic_info':
-        return <BasicInfoSection data={section.data} />;
+        return <BasicInfoSectionComponent data={section.data} onEdit={handleEdit} />;
       case 'about':
-        return <AboutSection data={section.data} />;
+        return <AboutSection data={section.data} onEdit={handleEdit} />;
       case 'experience':
-        return <ExperienceSection data={section.data} />;
+        return <ExperienceSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'education':
-        return <EducationSection data={section.data} />;
+        return <EducationSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'skills':
-        return <SkillsSection data={section.data} />;
+        return <SkillsSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'projects':
-        return <ProjectsSection data={section.data} />;
+        return <ProjectsSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'certificates':
-        return <CertificatesSection data={section.data} />;
+        return <CertificatesSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'languages':
-        return <LanguagesSection data={section.data} />;
+        return <LanguagesSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'awards':
-        return <AwardsSection data={section.data} />;
+        return <AwardsSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'volunteering':
-        return <VolunteeringSection data={section.data} />;
+        return <VolunteeringSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'accomplishments':
-        return <AccomplishmentsSection data={section.data} />;
+        return <AccomplishmentsSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       default:
-        return null;
+        return <div className="text-gray-500">Unknown section type</div>;
     }
   };
 
   return (
     <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          {section.title}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            {section.title}
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {section.data.type !== 'basic_info' && (
+              <button
+                onClick={() => handleEdit({}, '')}
+                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                title="Add new"
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {renderSectionContent()}
       </CardContent>
+      
+      <EditModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        sectionType={section.data.type}
+        data={editingData}
+        onSave={handleSave}
+        title={`Edit ${section.title}`}
+      />
     </Card>
   );
 };
 
 // Basic Info Section Component
-const BasicInfoSection: React.FC<{ data: any }> = ({ data }) => (
-  <div className="space-y-6">
-    {/* Profile Header */}
-    <div className="text-center">
-      <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
-        {data.profile_image_url ? (
-          <img 
-            src={data.profile_image_url} 
-            alt={`${data.first_name} ${data.last_name}`}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="text-4xl text-gray-600 font-semibold">
-            {data.first_name?.[0]}{data.last_name?.[0]}
-          </span>
+const BasicInfoSectionComponent: React.FC<{ data: BasicInfoSectionType; onEdit: (data: Record<string, unknown>, id?: string) => void }> = ({ data, onEdit }) => {
+  return (
+    <div className="space-y-6">
+      {/* Profile Header */}
+      <div className="text-center relative">
+        <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+          {data.profile_image_url ? (
+            <img 
+              src={data.profile_image_url} 
+              alt={`${data.first_name} ${data.last_name}`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-4xl text-gray-600 font-semibold">
+              {data.first_name?.[0]}{data.last_name?.[0]}
+            </span>
+          )}
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {data.first_name} {data.last_name}
+        </h1>
+        {data.title && (
+          <p className="text-xl text-gray-600 mb-2">{data.title}</p>
+        )}
+        {data.current_position && (
+          <p className="text-lg text-gray-600 mb-2">{data.current_position}</p>
+        )}
+        {data.industry && (
+          <p className="text-gray-500 mb-4">{data.industry}</p>
+        )}
+        
+        {/* Edit Button */}
+        <button
+          onClick={() => onEdit({ ...data }, '')}
+          className="absolute top-0 right-0 p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+          title="Edit basic info"
+        >
+          <Edit size={16} />
+        </button>
+      </div>
+
+      {/* Contact & Location Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {data.location && (
+          <div className="flex items-center gap-2 text-gray-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>{data.location}</span>
+          </div>
+        )}
+        {data.phone1 && (
+          <div className="flex items-center gap-2 text-gray-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            <span>{data.phone1}</span>
+          </div>
         )}
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">
-        {data.first_name} {data.last_name}
-      </h1>
-      {data.title && (
-        <p className="text-xl text-gray-600 mb-2">{data.title}</p>
+
+      {/* Social Links */}
+      {(data.linkedin_url || data.github_url || data.personal_website) && (
+        <div className="flex justify-center gap-4 pt-4 border-t border-gray-200">
+          {data.linkedin_url && (
+            <a 
+              href={data.linkedin_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+            </a>
+          )}
+          {data.github_url && (
+            <a 
+              href={data.github_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+            </a>
+          )}
+          {data.personal_website && (
+            <a 
+              href={data.personal_website} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+            </a>
+          )}
+        </div>
       )}
-      {data.current_position && (
-        <p className="text-lg text-gray-600 mb-2">{data.current_position}</p>
+
+      {/* Professional Summary */}
+      {data.professional_summary && (
+        <div className="pt-4 border-t border-gray-200">
+          <p className="text-gray-700 leading-relaxed">{data.professional_summary}</p>
+        </div>
       )}
-      {data.industry && (
-        <p className="text-gray-500 mb-4">{data.industry}</p>
+
+      {/* Availability Status */}
+      {data.availability_status && (
+        <div className="pt-4 border-t border-gray-200">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Status:</span>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              data.availability_status === 'available' 
+                ? 'bg-gray-100 text-gray-800' 
+                : data.availability_status === 'open_to_opportunities'
+                ? 'bg-gray-100 text-gray-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {data.availability_status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+            </span>
+          </div>
+        </div>
       )}
     </div>
-
-    {/* Contact & Location Info */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {data.location && (
-        <div className="flex items-center gap-2 text-gray-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span>{data.location}</span>
-        </div>
-      )}
-      {data.phone1 && (
-        <div className="flex items-center gap-2 text-gray-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-          </svg>
-          <span>{data.phone1}</span>
-        </div>
-      )}
-    </div>
-
-    {/* Social Links */}
-    {(data.linkedin_url || data.github_url || data.personal_website) && (
-      <div className="flex justify-center gap-4 pt-4 border-t border-gray-200">
-        {data.linkedin_url && (
-          <a 
-            href={data.linkedin_url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-            </svg>
-          </a>
-        )}
-        {data.github_url && (
-          <a 
-            href={data.github_url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-            </svg>
-          </a>
-        )}
-        {data.personal_website && (
-          <a 
-            href={data.personal_website} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-            </svg>
-          </a>
-        )}
-      </div>
-    )}
-
-    {/* Professional Summary */}
-    {data.professional_summary && (
-      <div className="pt-4 border-t border-gray-200">
-        <p className="text-gray-700 leading-relaxed">{data.professional_summary}</p>
-      </div>
-    )}
-
-    {/* Availability Status */}
-    {data.availability_status && (
-      <div className="pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Status:</span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            data.availability_status === 'available' 
-              ? 'bg-gray-100 text-gray-800' 
-              : data.availability_status === 'open_to_opportunities'
-              ? 'bg-gray-100 text-gray-800'
-              : 'bg-gray-100 text-gray-800'
-          }`}>
-            {data.availability_status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-          </span>
-        </div>
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 // About Section Component
-const AboutSection: React.FC<{ data: any }> = ({ data }) => (
-  <div className="space-y-4">
+const AboutSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void }> = ({ data, onEdit }) => (
+  <div className="space-y-4 relative">
+    <button
+      onClick={() => onEdit(data, '')}
+      className="absolute top-0 right-0 p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+      title="Edit about section"
+    >
+      <Edit size={16} />
+    </button>
+    
     {data.about && (
       <div>
         <h4 className="font-medium text-gray-900 mb-2">About</h4>
@@ -219,7 +314,7 @@ const AboutSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Experience Section Component
-const ExperienceSection: React.FC<{ data: any }> = ({ data }) => {
+const ExperienceSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => {
   // Group experiences by company
   const experiencesByCompany = data.experiences.reduce((acc: any, exp: any) => {
     const company = exp.company || 'Unknown Company';
@@ -230,35 +325,6 @@ const ExperienceSection: React.FC<{ data: any }> = ({ data }) => {
     return acc;
   }, {});
 
-  // Calculate total duration for each company
-  const getCompanyDuration = (experiences: any[]) => {
-    if (experiences.length === 0) return '';
-    
-    const sortedExps = experiences.sort((a: any, b: any) => 
-      new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
-    );
-    
-    const firstStart = new Date(sortedExps[0].start_date);
-    const lastEnd = sortedExps[sortedExps.length - 1].is_current 
-      ? new Date() 
-      : new Date(sortedExps[sortedExps.length - 1].end_date);
-    
-    const diffTime = Math.abs(lastEnd.getTime() - firstStart.getTime());
-    const diffYears = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365));
-    const diffMonths = Math.floor((diffTime % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
-    
-    let duration = '';
-    if (diffYears > 0) {
-      duration += `${diffYears} yr${diffYears > 1 ? 's' : ''}`;
-    }
-    if (diffMonths > 0) {
-      if (duration) duration += ' ';
-      duration += `${diffMonths} mo${diffMonths > 1 ? 's' : ''}`;
-    }
-    
-    return duration;
-  };
-
   return (
     <div className="space-y-6">
       {Object.entries(experiencesByCompany).map(([company, companyExperiences]: [string, any]) => (
@@ -266,22 +332,13 @@ const ExperienceSection: React.FC<{ data: any }> = ({ data }) => {
           {/* Company Header */}
           <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              {/* Company Logo Placeholder */}
               <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-lg font-semibold text-gray-600">
                   {company.charAt(0).toUpperCase()}
                 </span>
               </div>
-              
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">{company}</h3>
-                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                  <span>Full-time</span>
-                  <span>•</span>
-                  <span>{getCompanyDuration(companyExperiences)}</span>
-                  <span>•</span>
-                  <span>Hybrid</span>
-                </div>
               </div>
             </div>
           </div>
@@ -291,7 +348,7 @@ const ExperienceSection: React.FC<{ data: any }> = ({ data }) => {
             {companyExperiences
               .sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
               .map((exp: any) => (
-                <div key={exp.id} className="border-l-4 border-gray-300 pl-4 py-2">
+                <div key={exp.id} className="border-l-4 border-gray-300 pl-4 py-2 relative">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-semibold text-gray-900 text-lg">{exp.title}</h4>
@@ -304,48 +361,29 @@ const ExperienceSection: React.FC<{ data: any }> = ({ data }) => {
                         <span>•</span>
                         <span>{exp.location || 'Remote'}</span>
                       </div>
-                      {exp.employment_type && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {exp.employment_type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                        </p>
-                      )}
+                    </div>
+                    
+                    {/* Edit and Delete buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onEdit(exp, exp.id)}
+                        className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit experience"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(exp.id)}
+                        className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Delete experience"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
                   
                   {exp.description && (
                     <p className="text-gray-700 mb-3 leading-relaxed">{exp.description}</p>
-                  )}
-                  
-                  {/* Skills */}
-                  {exp.skill_ids && exp.skill_ids.length > 0 && (
-                    <div className="mb-3">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                        <span>Skills: {exp.skill_ids.slice(0, 3).join(', ')}</span>
-                        {exp.skill_ids.length > 3 && (
-                          <span className="text-gray-500">and +{exp.skill_ids.length - 3} more</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Accomplishments */}
-                  {exp.accomplishments && exp.accomplishments.length > 0 && (
-                    <div className="ml-4 mt-3">
-                      <h5 className="font-medium text-gray-900 mb-2 text-sm">Key Achievements:</h5>
-                      <ul className="space-y-2">
-                        {exp.accomplishments.map((acc: any) => (
-                          <li key={acc.id} className="text-gray-700 text-sm border-l-2 border-gray-200 pl-3 py-1">
-                            <span className="font-medium">{acc.title}</span>
-                            {acc.description && (
-                              <span className="text-gray-600">: {acc.description}</span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
                   )}
                 </div>
               ))}
@@ -357,10 +395,10 @@ const ExperienceSection: React.FC<{ data: any }> = ({ data }) => {
 };
 
 // Education Section Component
-const EducationSection: React.FC<{ data: any }> = ({ data }) => (
+const EducationSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-6">
     {data.educations.map((edu: any) => (
-      <div key={edu.id} className="border-l-4  border border-gray-200 p-2 pl-4 rounded-lg">
+      <div key={edu.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
             <h4 className="font-semibold text-gray-900 text-lg">{edu.degree_diploma}</h4>
@@ -369,7 +407,7 @@ const EducationSection: React.FC<{ data: any }> = ({ data }) => (
               <p className="text-gray-600">{edu.field_of_study}</p>
             )}
           </div>
-          <div className="text-right">
+          <div className="text-right mt-4">
             <span className="text-sm text-gray-500">
               {edu.start_date && new Date(edu.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               {' - '}
@@ -377,6 +415,25 @@ const EducationSection: React.FC<{ data: any }> = ({ data }) => (
             </span>
           </div>
         </div>
+        
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <button
+            onClick={() => onEdit(edu, edu.id)}
+            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Edit education"
+          >
+            <Edit size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(edu.id)}
+            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete education"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+        
         {edu.grade && (
           <p className="text-gray-600 text-sm mb-2">Grade: {edu.grade}</p>
         )}
@@ -392,11 +449,11 @@ const EducationSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Skills Section Component
-const SkillsSection: React.FC<{ data: any }> = ({ data }) => (
+const SkillsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-4">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {data.skills.map((skill: any) => (
-        <div key={skill.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+        <div key={skill.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors relative">
           <div className="font-medium text-gray-900 mb-2">{skill.name}</div>
           {skill.category && (
             <div className="text-sm text-gray-600 mb-1">
@@ -404,6 +461,23 @@ const SkillsSection: React.FC<{ data: any }> = ({ data }) => (
             </div>
           )}
           
+          {/* Edit and Delete buttons */}
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            <button
+              onClick={() => onEdit(skill, skill.id)}
+              className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              title="Edit skill"
+            >
+              <Edit size={12} />
+            </button>
+            <button
+              onClick={() => onDelete(skill.id)}
+              className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+              title="Delete skill"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
         </div>
       ))}
     </div>
@@ -411,10 +485,10 @@ const SkillsSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Projects Section Component
-const ProjectsSection: React.FC<{ data: any }> = ({ data }) => (
+const ProjectsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-6">
     {data.projects.map((project: any) => (
-      <div key={project.id} className="border border-gray-200 rounded-lg p-4">
+      <div key={project.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-3">
           <div>
             <h4 className="font-semibold text-gray-900 text-lg">{project.name}</h4>
@@ -430,6 +504,25 @@ const ProjectsSection: React.FC<{ data: any }> = ({ data }) => (
             </span>
           </div>
         </div>
+        
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <button
+            onClick={() => onEdit(project, project.id)}
+            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Edit project"
+          >
+            <Edit size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(project.id)}
+            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete project"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+        
         {project.description && (
           <p className="text-gray-700 mb-3">{project.description}</p>
         )}
@@ -464,10 +557,10 @@ const ProjectsSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Certificates Section Component
-const CertificatesSection: React.FC<{ data: any }> = ({ data }) => (
+const CertificatesSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-4">
     {data.certificates.map((cert: any) => (
-      <div key={cert.id} className="border border-gray-200 rounded-lg p-4">
+      <div key={cert.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
             <h4 className="font-semibold text-gray-900">{cert.name}</h4>
@@ -479,6 +572,25 @@ const CertificatesSection: React.FC<{ data: any }> = ({ data }) => (
             </span>
           </div>
         </div>
+        
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <button
+            onClick={() => onEdit(cert, cert.id)}
+            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Edit certificate"
+          >
+            <Edit size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(cert.id)}
+            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete certificate"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+        
         {cert.description && (
           <p className="text-gray-700 mb-2">{cert.description}</p>
         )}
@@ -501,10 +613,10 @@ const CertificatesSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Languages Section Component
-const LanguagesSection: React.FC<{ data: any }> = ({ data }) => (
+const LanguagesSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-4">
     {data.languages.map((lang: any) => (
-      <div key={lang.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+      <div key={lang.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg relative">
         <div>
           <span className="font-medium text-gray-900">{lang.language}</span>
           {lang.is_native && (
@@ -514,16 +626,34 @@ const LanguagesSection: React.FC<{ data: any }> = ({ data }) => (
           )}
         </div>
         <div className="text-right">
-                      {lang.oral_proficiency && (
-              <div className="text-sm text-gray-600">
-                Oral: {lang.oral_proficiency.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-              </div>
-            )}
-            {lang.written_proficiency && (
-              <div className="text-sm text-gray-600">
-                Written: {lang.written_proficiency.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-              </div>
-            )}
+          {lang.oral_proficiency && (
+            <div className="text-sm text-gray-600">
+              Oral: {lang.oral_proficiency.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+            </div>
+          )}
+          {lang.written_proficiency && (
+            <div className="text-sm text-gray-600">
+              Written: {lang.written_proficiency.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+            </div>
+          )}
+        </div>
+        
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          <button
+            onClick={() => onEdit(lang, lang.id)}
+            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Edit language"
+          >
+            <Edit size={12} />
+          </button>
+          <button
+            onClick={() => onDelete(lang.id)}
+            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete language"
+          >
+            <Trash2 size={12} />
+          </button>
         </div>
       </div>
     ))}
@@ -531,10 +661,10 @@ const LanguagesSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Awards Section Component
-const AwardsSection: React.FC<{ data: any }> = ({ data }) => (
+const AwardsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-4">
     {data.awards.map((award: any) => (
-      <div key={award.id} className="border border-gray-200 rounded-lg p-4">
+      <div key={award.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
             <h4 className="font-semibold text-gray-900">{award.title}</h4>
@@ -546,11 +676,30 @@ const AwardsSection: React.FC<{ data: any }> = ({ data }) => (
             )}
           </div>
           {award.date && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm mt-4 text-gray-500">
               {new Date(award.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
             </span>
           )}
         </div>
+        
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <button
+            onClick={() => onEdit(award, award.id)}
+            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Edit award"
+          >
+            <Edit size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(award.id)}
+            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete award"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+        
         {award.description && (
           <p className="text-gray-700">{award.description}</p>
         )}
@@ -560,10 +709,10 @@ const AwardsSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Volunteering Section Component
-const VolunteeringSection: React.FC<{ data: any }> = ({ data }) => (
+const VolunteeringSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-4">
     {data.volunteering.map((vol: any) => (
-      <div key={vol.id} className="border border-gray-200 rounded-lg p-4">
+      <div key={vol.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
             <h4 className="font-semibold text-gray-900">{vol.role}</h4>
@@ -580,6 +729,25 @@ const VolunteeringSection: React.FC<{ data: any }> = ({ data }) => (
             </span>
           </div>
         </div>
+        
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <button
+            onClick={() => onEdit(vol, vol.id)}
+            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Edit volunteering"
+          >
+            <Edit size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(vol.id)}
+            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete volunteering"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+        
         {vol.description && (
           <p className="text-gray-700">{vol.description}</p>
         )}
@@ -589,10 +757,10 @@ const VolunteeringSection: React.FC<{ data: any }> = ({ data }) => (
 );
 
 // Accomplishments Section Component
-const AccomplishmentsSection: React.FC<{ data: any }> = ({ data }) => (
+const AccomplishmentsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
   <div className="space-y-4">
     {data.accomplishments.map((acc: any) => (
-      <div key={acc.id} className="border-l-4 border-gray-500 pl-4 py-2">
+      <div key={acc.id} className="border-l-4 border-gray-500 pl-4 py-2 relative">
         <h4 className="font-medium text-gray-900 mb-1">{acc.title}</h4>
         {acc.description && (
           <p className="text-gray-700 text-sm">{acc.description}</p>
@@ -602,6 +770,24 @@ const AccomplishmentsSection: React.FC<{ data: any }> = ({ data }) => (
             {new Date(acc.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           </p>
         )}
+        
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <button
+            onClick={() => onEdit(acc, acc.id)}
+            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Edit accomplishment"
+          >
+            <Edit size={12} />
+          </button>
+          <button
+            onClick={() => onDelete(acc.id)}
+            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete accomplishment"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
       </div>
     ))}
   </div>

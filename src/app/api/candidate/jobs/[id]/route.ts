@@ -59,22 +59,16 @@ interface JobDetailResponse {
     jobDesignation: {
       id: number;
       name: string;
-      iscoUnitGroup: {
+      isco_08: {
         id: number;
-        name: string;
-        minorGroup: {
-          id: number;
-          name: string;
-          subMajorGroup: {
-            id: number;
-            name: string;
-            majorGroup: {
-              id: number;
-              code: string;
-              label: string;
-            };
-          };
-        };
+        description: string;
+        major: number;
+        major_label: string;
+        sub_major: number;
+        sub_major_label: string;
+        minor: number;
+        minor_label: string;
+        unit: number;
       };
     };
     
@@ -118,10 +112,10 @@ interface JobDetailResponse {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<JobDetailResponse | ApiErrorResponse>> {
   try {
-    const jobId = params.id;
+    const { id: jobId } = await params;
 
     if (!jobId) {
       return NextResponse.json(
@@ -145,19 +139,7 @@ export async function GET(
         },
         jobDesignation: {
           include: {
-            iscoUnitGroup: {
-              include: {
-                minorGroup: {
-                  include: {
-                    subMajorGroup: {
-                      include: {
-                        majorGroup: true
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            isco_08: true
           }
         },
         creator_mis_user: {
@@ -233,22 +215,16 @@ export async function GET(
       jobDesignation: {
         id: job.jobDesignation.id,
         name: job.jobDesignation.name,
-        iscoUnitGroup: {
-          id: job.jobDesignation.iscoUnitGroup.id,
-          name: job.jobDesignation.iscoUnitGroup.name,
-          minorGroup: {
-            id: job.jobDesignation.iscoUnitGroup.minorGroup.id,
-            name: job.jobDesignation.iscoUnitGroup.minorGroup.name,
-            subMajorGroup: {
-              id: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.id,
-              name: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.name,
-              majorGroup: {
-                id: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.majorGroup.id,
-                code: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.majorGroup.code,
-                label: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.majorGroup.label
-              }
-            }
-          }
+        isco_08: {
+          id: job.jobDesignation.isco_08.id,
+          description: job.jobDesignation.isco_08.description,
+          major: job.jobDesignation.isco_08.major,
+          major_label: job.jobDesignation.isco_08.major_label,
+          sub_major: job.jobDesignation.isco_08.sub_major,
+          sub_major_label: job.jobDesignation.isco_08.sub_major_label,
+          minor: job.jobDesignation.isco_08.minor,
+          minor_label: job.jobDesignation.isco_08.minor_label,
+          unit: job.jobDesignation.isco_08.unit
         }
       },
       

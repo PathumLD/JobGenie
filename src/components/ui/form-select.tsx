@@ -26,9 +26,12 @@ const FormSelect = React.forwardRef<HTMLSelectElement, FormSelectProps>(
     placeholder,
     variant = 'default',
     id,
+    name,
     ...props 
   }, ref) => {
-    const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
+    // Use name prop or generate a stable ID based on name
+    const generatedId = React.useId();
+    const selectId = id || (name ? `select-${name.replace(/[^a-zA-Z0-9]/g, '-')}` : `select-${generatedId}`);
     
     const baseSelectClasses = "w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 appearance-none";
     

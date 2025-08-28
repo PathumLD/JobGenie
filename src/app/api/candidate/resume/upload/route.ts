@@ -26,9 +26,173 @@ interface ResumeUploadData {
   file_type?: string;
 }
 
+// Enhanced duplicate detection function with stricter matching
+type WorkExperienceData = {
+  title: string;
+  company: string;
+  employment_type: 'full_time' | 'part_time' | 'contract' | 'internship' | 'freelance' | 'volunteer';
+};
+
+type EducationData = {
+  degree_diploma: string;
+  university_school: string;
+};
+
+type CertificateData = {
+  name: string;
+  issuing_authority: string;
+};
+
+type ProjectData = {
+  name: string;
+};
+
+type AwardData = {
+  title: string;
+  offered_by: string;
+};
+
+type VolunteeringData = {
+  role: string;
+  institution: string;
+};
+
+type LanguageData = {
+  language: string;
+};
+
+type SkillData = {
+  name: string;
+};
+
+type ResumeData = 
+  | { type: 'work_experience'; data: WorkExperienceData }
+  | { type: 'education'; data: EducationData }
+  | { type: 'certificate'; data: CertificateData }
+  | { type: 'project'; data: ProjectData }
+  | { type: 'award'; data: AwardData }
+  | { type: 'volunteering'; data: VolunteeringData }
+  | { type: 'language'; data: LanguageData }
+  | { type: 'skill'; data: SkillData };
+
+async function checkDuplicateData(
+  candidateId: string,
+  dataType: 'work_experience' | 'education' | 'certificate' | 'project' | 'award' | 'volunteering' | 'language' | 'skill',
+  data: WorkExperienceData | EducationData | CertificateData | ProjectData | AwardData | VolunteeringData | LanguageData | SkillData
+): Promise<boolean> {
+  try {
+    switch (dataType) {
+      case 'work_experience': {
+        const workData = data as WorkExperienceData;
+        const existingWorkExp = await prisma.workExperience.findFirst({
+          where: {
+            candidate_id: candidateId,
+            title: { equals: workData.title, mode: 'insensitive' },
+            company: { equals: workData.company, mode: 'insensitive' },
+            employment_type: workData.employment_type
+          }
+        });
+        return !!existingWorkExp;
+      }
+
+      case 'education': {
+        const eduData = data as EducationData;
+        const existingEdu = await prisma.education.findFirst({
+          where: {
+            candidate_id: candidateId,
+            degree_diploma: { equals: eduData.degree_diploma, mode: 'insensitive' },
+            university_school: { equals: eduData.university_school, mode: 'insensitive' }
+          }
+        });
+        return !!existingEdu;
+      }
+
+      case 'certificate': {
+        const certData = data as CertificateData;
+        const existingCert = await prisma.certificate.findFirst({
+          where: {
+            candidate_id: candidateId,
+            name: { equals: certData.name, mode: 'insensitive' },
+            issuing_authority: { equals: certData.issuing_authority, mode: 'insensitive' }
+          }
+        });
+        return !!existingCert;
+      }
+
+      case 'project': {
+        const projData = data as ProjectData;
+        const existingProj = await prisma.project.findFirst({
+          where: {
+            candidate_id: candidateId,
+            name: { equals: projData.name, mode: 'insensitive' }
+          }
+        });
+        return !!existingProj;
+      }
+
+      case 'award': {
+        const awardData = data as AwardData;
+        const existingAward = await prisma.award.findFirst({
+          where: {
+            candidate_id: candidateId,
+            title: { equals: awardData.title, mode: 'insensitive' },
+            offered_by: { equals: awardData.offered_by, mode: 'insensitive' }
+          }
+        });
+        return !!existingAward;
+      }
+
+      case 'volunteering': {
+        const volData = data as VolunteeringData;
+        const existingVol = await prisma.volunteering.findFirst({
+          where: {
+            candidate_id: candidateId,
+            role: { equals: volData.role, mode: 'insensitive' },
+            institution: { equals: volData.institution, mode: 'insensitive' }
+          }
+        });
+        return !!existingVol;
+      }
+
+      case 'language': {
+        const langData = data as LanguageData;
+        const existingLang = await prisma.language.findFirst({
+          where: {
+            candidate_id: candidateId,
+            language: { equals: langData.language, mode: 'insensitive' }
+          }
+        });
+        return !!existingLang;
+      }
+
+      case 'skill': {
+        const skillData = data as SkillData;
+        const existingSkill = await prisma.candidateSkill.findFirst({
+          where: {
+            candidate_id: candidateId,
+            skill: {
+              name: { equals: skillData.name, mode: 'insensitive' }
+            }
+          },
+          include: {
+            skill: true
+          }
+        });
+        return !!existingSkill;
+      }
+
+      default:
+        return false;
+    }
+  } catch (error) {
+    console.error(`❌ Error in duplicate detection for ${dataType}:`, error);
+    // If error occurs, be conservative and treat as duplicate to prevent data corruption
+    return true;
+  }
+}
+
 // Helper function to upload resume to Supabase storage
 async function uploadResume(file: File, candidateId: string): Promise<{ filePath: string; publicUrl: string }> {
-  const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}_${file.name}`;
   const filePath = `candidate_resume/${candidateId}/${fileName}`;
   

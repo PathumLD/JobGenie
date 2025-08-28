@@ -20,9 +20,12 @@ const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
     rightIcon, 
     variant = 'default',
     id,
+    name,
     ...props 
   }, ref) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    // Use name prop or generate a stable ID based on name
+    const generatedId = React.useId();
+    const inputId = id || (name ? `input-${name.replace(/[^a-zA-Z0-9]/g, '-')}` : `input-${generatedId}`);
     
     const baseInputClasses = "w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200";
     
@@ -62,6 +65,7 @@ const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
           <input
             id={inputId}
             ref={ref}
+            name={name}
             className={inputClasses}
             {...props}
           />

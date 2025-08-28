@@ -123,26 +123,24 @@ export async function GET(request: NextRequest): Promise<NextResponse<JobFilters
         orderBy: { _count: { remote_type: 'desc' } }
       }),
       
-      // Industries with counts
-      prisma.job.findMany({
-        where: {
-          ...baseWhereClause,
-          company: { industry: { not: undefined } }
+      // Industries (from company table)
+      prisma.company.findMany({
+        where: { 
+          industry: { not: undefined },
+          jobs: { some: { status: 'published' } }
         },
-        select: {
-          company: { select: { industry: true } }
-        }
+        select: { industry: true },
+        distinct: ['industry']
       }),
       
-      // Company sizes with counts
-      prisma.job.findMany({
-        where: {
-          ...baseWhereClause,
-          company: { company_size: { not: undefined } }
+      // Company sizes
+      prisma.company.findMany({
+        where: { 
+          company_size: { not: undefined },
+          jobs: { some: { status: 'published' } }
         },
-        select: {
-          company: { select: { company_size: true } }
-        }
+        select: { company_size: true },
+        distinct: ['company_size']
       }),
       
       // Salary ranges
@@ -233,7 +231,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<JobFilters
 
     // Transform industries
     const industryCounts = industries.reduce((acc, job) => {
-      const industry = job.company?.industry;
+      const industry = job.industry;
       if (industry) {
         acc[industry] = (acc[industry] || 0) + 1;
       }
@@ -251,7 +249,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<JobFilters
 
     // Transform company sizes
     const companySizeCounts = companySizes.reduce((acc, job) => {
-      const size = job.company?.company_size;
+      const size = job.company_size;
       if (size) {
         acc[size] = (acc[size] || 0) + 1;
       }

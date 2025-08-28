@@ -285,24 +285,24 @@ export async function GET(request: NextRequest): Promise<NextResponse<JobListing
     orderBy[sort_by] = sort_order;
 
     // Fetch jobs with pagination
-    const [jobs, totalJobs] = await Promise.all([
-      prisma.job.findMany({
-        where: whereClause as any, // Type assertion needed for complex Prisma queries
-        include: {
-          company: true,
-          skills: {
-            include: {
-              skill: true
-            }
+          const [jobs, totalJobs] = await Promise.all([
+        prisma.job.findMany({
+          where: whereClause as unknown as Prisma.JobWhereInput,
+          include: {
+            company: true,
+            skills: {
+              include: {
+                skill: true
+              }
+            },
+            jobDesignation: true
           },
-          jobDesignation: true
-        },
-        orderBy,
-        skip: offset,
-        take: limit
-      }),
-      prisma.job.count({ where: whereClause as any })
-    ]);
+          orderBy,
+          skip: offset,
+          take: limit
+        }),
+        prisma.job.count({ where: whereClause as unknown as Prisma.JobWhereInput })
+      ]);
 
     // Transform jobs data
     const transformedJobs = jobs.map(job => ({
@@ -433,21 +433,21 @@ async function getAvailableFilters(baseWhereClause: Record<string, unknown>) {
     ] = await Promise.all([
       // Get available experience levels
       prisma.job.findMany({
-        where: { ...baseWhereClause, status: 'published' } as any,
+        where: { ...baseWhereClause, status: 'published' } as unknown as Prisma.JobWhereInput,
         select: { experience_level: true },
         distinct: ['experience_level']
       }),
       
       // Get available job types
       prisma.job.findMany({
-        where: { ...baseWhereClause, status: 'published' } as any,
+        where: { ...baseWhereClause, status: 'published' } as unknown as Prisma.JobWhereInput,
         select: { job_type: true },
         distinct: ['job_type']
       }),
       
       // Get available remote types
       prisma.job.findMany({
-        where: { ...baseWhereClause, status: 'published' } as any,
+        where: { ...baseWhereClause, status: 'published' } as unknown as Prisma.JobWhereInput,
         select: { remote_type: true },
         distinct: ['remote_type']
       }),
@@ -458,7 +458,7 @@ async function getAvailableFilters(baseWhereClause: Record<string, unknown>) {
           ...baseWhereClause, 
           status: 'published',
           company: { industry: { not: null } }
-        } as any,
+        } as unknown as Prisma.JobWhereInput,
         select: {
           company: { select: { industry: true } }
         }
@@ -470,7 +470,7 @@ async function getAvailableFilters(baseWhereClause: Record<string, unknown>) {
           ...baseWhereClause, 
           status: 'published',
           company: { company_size: { not: null } }
-        } as any,
+        } as unknown as Prisma.JobWhereInput,
         select: {
           company: { select: { company_size: true } }
         }
@@ -485,7 +485,7 @@ async function getAvailableFilters(baseWhereClause: Record<string, unknown>) {
             { salary_min: { not: null } },
             { salary_max: { not: null } }
           ]
-        } as any,
+        } as unknown as Prisma.JobWhereInput,
         select: { 
           salary_min: true, 
           salary_max: true, 

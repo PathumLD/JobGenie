@@ -118,10 +118,10 @@ interface JobDetailResponse {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<JobDetailResponse | ApiErrorResponse>> {
   try {
-    const jobId = params.id;
+    const { id: jobId } = await params;
 
     if (!jobId) {
       return NextResponse.json(
@@ -235,13 +235,13 @@ export async function GET(
         name: job.jobDesignation.name,
         iscoUnitGroup: {
           id: job.jobDesignation.iscoUnitGroup.id,
-          name: job.jobDesignation.iscoUnitGroup.name,
+          name: job.jobDesignation.iscoUnitGroup.label,
           minorGroup: {
             id: job.jobDesignation.iscoUnitGroup.minorGroup.id,
-            name: job.jobDesignation.iscoUnitGroup.minorGroup.name,
+            name: job.jobDesignation.iscoUnitGroup.minorGroup.label,
             subMajorGroup: {
               id: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.id,
-              name: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.name,
+              name: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.label,
               majorGroup: {
                 id: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.majorGroup.id,
                 code: job.jobDesignation.iscoUnitGroup.minorGroup.subMajorGroup.majorGroup.code,

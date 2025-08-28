@@ -370,16 +370,16 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 CV Data Extraction API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from cookies instead of Authorization header
+    const accessToken = request.cookies.get('access_token')?.value;
+    
+    if (!accessToken) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
       );
     }
 
-    const token = authHeader.substring(7);
     if (!process.env.JWT_SECRET) {
       return NextResponse.json(
         { error: 'Server configuration error' },
@@ -389,11 +389,11 @@ export async function POST(request: NextRequest) {
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = jwt.verify(accessToken, process.env.JWT_SECRET) as JWTPayload;
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -583,7 +583,12 @@ export async function POST(request: NextRequest) {
       console.log('📊 EXTRACTION COMPLETE - Data ready for form population');
       console.log('=====================================\n');
 
-      // 7. Return extracted data for frontend form population
+      // 7. Convert file to base64 for storage
+      const resumeArrayBuffer = await file.arrayBuffer();
+      const resumeBase64Data = Buffer.from(resumeArrayBuffer).toString('base64');
+      const resumeFileData = `data:${file.type};base64,${resumeBase64Data}`;
+
+      // 8. Return extracted data for frontend form population
       return NextResponse.json({
         success: true,
         message: 'CV data extracted successfully',
@@ -594,6 +599,7 @@ export async function POST(request: NextRequest) {
             size: file.size,
             type: file.type,
           },
+          resumeFile: resumeFileData, // Store resume file as base64
           extraction_summary: {
             work_experiences_count: extractedData.work_experiences.length,
             educations_count: extractedData.educations.length,
@@ -620,9 +626,9 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ CV extraction error:', error);
+    console.error('CV extraction error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to extract CV data' },
       { status: 500 }
     );
   }

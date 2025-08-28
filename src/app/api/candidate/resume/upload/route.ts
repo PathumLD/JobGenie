@@ -28,7 +28,6 @@ interface ResumeUploadData {
 
 // Helper function to upload resume to Supabase storage
 async function uploadResume(file: File, candidateId: string): Promise<{ filePath: string; publicUrl: string }> {
-  const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}_${file.name}`;
   const filePath = `candidate_resume/${candidateId}/${fileName}`;
   

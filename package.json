@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed:isco": "node prisma/seed_isco_tables.js",
+    "seed:isco:batch": "node prisma/seed_isco_batch.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.23.0",
@@ -28,6 +30,8 @@
     "nodemailer": "^7.0.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-hook-form": "^7.62.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.1.0"
   },

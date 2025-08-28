@@ -27,96 +27,151 @@ interface ResumeUploadData {
 }
 
 // Enhanced duplicate detection function with stricter matching
+type WorkExperienceData = {
+  title: string;
+  company: string;
+  employment_type: 'full_time' | 'part_time' | 'contract' | 'internship' | 'freelance' | 'volunteer';
+};
+
+type EducationData = {
+  degree_diploma: string;
+  university_school: string;
+};
+
+type CertificateData = {
+  name: string;
+  issuing_authority: string;
+};
+
+type ProjectData = {
+  name: string;
+};
+
+type AwardData = {
+  title: string;
+  offered_by: string;
+};
+
+type VolunteeringData = {
+  role: string;
+  institution: string;
+};
+
+type LanguageData = {
+  language: string;
+};
+
+type SkillData = {
+  name: string;
+};
+
+type ResumeData = 
+  | { type: 'work_experience'; data: WorkExperienceData }
+  | { type: 'education'; data: EducationData }
+  | { type: 'certificate'; data: CertificateData }
+  | { type: 'project'; data: ProjectData }
+  | { type: 'award'; data: AwardData }
+  | { type: 'volunteering'; data: VolunteeringData }
+  | { type: 'language'; data: LanguageData }
+  | { type: 'skill'; data: SkillData };
+
 async function checkDuplicateData(
   candidateId: string,
   dataType: 'work_experience' | 'education' | 'certificate' | 'project' | 'award' | 'volunteering' | 'language' | 'skill',
-  data: any
+  data: WorkExperienceData | EducationData | CertificateData | ProjectData | AwardData | VolunteeringData | LanguageData | SkillData
 ): Promise<boolean> {
   try {
     switch (dataType) {
-      case 'work_experience':
-        // Stricter work experience duplicate detection
+      case 'work_experience': {
+        const workData = data as WorkExperienceData;
         const existingWorkExp = await prisma.workExperience.findFirst({
           where: {
             candidate_id: candidateId,
-            title: { equals: data.title, mode: 'insensitive' },
-            company: { equals: data.company, mode: 'insensitive' },
-            employment_type: data.employment_type
+            title: { equals: workData.title, mode: 'insensitive' },
+            company: { equals: workData.company, mode: 'insensitive' },
+            employment_type: workData.employment_type
           }
         });
         return !!existingWorkExp;
+      }
 
-      case 'education':
-        // Stricter education duplicate detection
+      case 'education': {
+        const eduData = data as EducationData;
         const existingEdu = await prisma.education.findFirst({
           where: {
             candidate_id: candidateId,
-            degree_diploma: { equals: data.degree_diploma, mode: 'insensitive' },
-            university_school: { equals: data.university_school, mode: 'insensitive' }
+            degree_diploma: { equals: eduData.degree_diploma, mode: 'insensitive' },
+            university_school: { equals: eduData.university_school, mode: 'insensitive' }
           }
         });
         return !!existingEdu;
+      }
 
-      case 'certificate':
-        // Stricter certificate duplicate detection
+      case 'certificate': {
+        const certData = data as CertificateData;
         const existingCert = await prisma.certificate.findFirst({
           where: {
             candidate_id: candidateId,
-            name: { equals: data.name, mode: 'insensitive' },
-            issuing_authority: { equals: data.issuing_authority, mode: 'insensitive' }
+            name: { equals: certData.name, mode: 'insensitive' },
+            issuing_authority: { equals: certData.issuing_authority, mode: 'insensitive' }
           }
         });
         return !!existingCert;
+      }
 
-      case 'project':
-        // Stricter project duplicate detection
+      case 'project': {
+        const projData = data as ProjectData;
         const existingProj = await prisma.project.findFirst({
           where: {
             candidate_id: candidateId,
-            name: { equals: data.name, mode: 'insensitive' }
+            name: { equals: projData.name, mode: 'insensitive' }
           }
         });
         return !!existingProj;
+      }
 
-      case 'award':
-        // Stricter award duplicate detection
+      case 'award': {
+        const awardData = data as AwardData;
         const existingAward = await prisma.award.findFirst({
           where: {
             candidate_id: candidateId,
-            title: { equals: data.title, mode: 'insensitive' },
-            offered_by: { equals: data.offered_by, mode: 'insensitive' }
+            title: { equals: awardData.title, mode: 'insensitive' },
+            offered_by: { equals: awardData.offered_by, mode: 'insensitive' }
           }
         });
         return !!existingAward;
+      }
 
-      case 'volunteering':
-        // Stricter volunteering duplicate detection
+      case 'volunteering': {
+        const volData = data as VolunteeringData;
         const existingVol = await prisma.volunteering.findFirst({
           where: {
             candidate_id: candidateId,
-            role: { equals: data.role, mode: 'insensitive' },
-            institution: { equals: data.institution, mode: 'insensitive' }
+            role: { equals: volData.role, mode: 'insensitive' },
+            institution: { equals: volData.institution, mode: 'insensitive' }
           }
         });
         return !!existingVol;
+      }
 
-      case 'language':
-        // Stricter language duplicate detection
+      case 'language': {
+        const langData = data as LanguageData;
         const existingLang = await prisma.language.findFirst({
           where: {
             candidate_id: candidateId,
-            language: { equals: data.language, mode: 'insensitive' }
+            language: { equals: langData.language, mode: 'insensitive' }
           }
         });
         return !!existingLang;
+      }
 
-      case 'skill':
-        // Stricter skill duplicate detection
+      case 'skill': {
+        const skillData = data as SkillData;
         const existingSkill = await prisma.candidateSkill.findFirst({
           where: {
             candidate_id: candidateId,
             skill: {
-              name: { equals: data.name, mode: 'insensitive' }
+              name: { equals: skillData.name, mode: 'insensitive' }
             }
           },
           include: {
@@ -124,6 +179,7 @@ async function checkDuplicateData(
           }
         });
         return !!existingSkill;
+      }
 
       default:
         return false;

@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/jwt';
+import { generateMembershipNumberFromUserId } from '@/lib/membership';
 
 const prisma = new PrismaClient();
 
@@ -226,6 +227,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Create candidate profile
+    const membershipNo = generateMembershipNumberFromUserId(payload.userId);
     const candidate = await prisma.candidate.create({
       data: {
         user_id: payload.userId,
@@ -248,6 +250,7 @@ export async function POST(request: NextRequest) {
         experience_level: profileData.basic_info.experience_level,
         profile_image_url: profileData.basic_info.profile_image_url,
         resume_url: resumeUrl,
+        membership_no: membershipNo,
         profile_completion_percentage: 100,
         completedProfile: true,
         created_at: new Date(),
@@ -444,12 +447,12 @@ export async function POST(request: NextRequest) {
       resumeRecord = await prisma.resume.create({
         data: {
           candidate_id: payload.userId,
-          file_name: extractedResume?.name || 'extracted_resume',
-          file_url: resumeUrl,
+          original_filename: extractedResume?.name || 'extracted_resume',
+          resume_url: resumeUrl,
           file_size: extractedResume?.size || 0,
           file_type: extractedResume?.type || 'application/pdf',
-          upload_source: 'cv_extraction',
-          is_active: true,
+          is_primary: true,
+          uploaded_at: new Date(),
           created_at: new Date(),
           updated_at: new Date(),
         }

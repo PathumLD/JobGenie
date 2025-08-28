@@ -24,7 +24,8 @@ const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
     ...props 
   }, ref) => {
     // Use name prop or generate a stable ID based on name
-    const inputId = id || (name ? `input-${name.replace(/[^a-zA-Z0-9]/g, '-')}` : `input-${React.useId()}`);
+    const generatedId = React.useId();
+    const inputId = id || (name ? `input-${name.replace(/[^a-zA-Z0-9]/g, '-')}` : `input-${generatedId}`);
     
     const baseInputClasses = "w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200";
     

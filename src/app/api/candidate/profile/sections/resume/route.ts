@@ -6,30 +6,12 @@ const prisma = new PrismaClient();
 
 // Types based on Prisma schema
 interface ResumeCreateData {
-  title: string;
-  file_url: string;
-  file_name: string;
+  resume_url: string;
+  original_filename: string;
   file_size: number;
   file_type: string;
   is_primary?: boolean;
-  description?: string;
-  tags?: string[];
-  version?: string;
-  created_by?: string;
-  updated_by?: string;
-  status?: string;
-  visibility?: string;
-  access_level?: string;
-  download_count?: number;
-  last_downloaded?: string;
-  last_viewed?: string;
-  rating?: number;
-  feedback?: string;
-  is_archived?: boolean;
-  archive_reason?: string;
-  archive_date?: string;
-  restore_date?: string;
-  metadata?: Record<string, unknown>;
+  is_allow_fetch?: boolean;
 }
 
 interface ResumeUpdateData {
@@ -65,30 +47,13 @@ interface ResumeResponse {
   data?: {
     id: string;
     candidate_id: string;
-    title: string | null;
-    file_url: string | null;
-    file_name: string | null;
+    is_allow_fetch: boolean | null;
+    resume_url: string | null;
+    original_filename: string | null;
     file_size: number | null;
     file_type: string | null;
     is_primary: boolean | null;
-    description: string | null;
-    tags: string[];
-    version: string | null;
-    created_by: string | null;
-    updated_by: string | null;
-    status: string | null;
-    visibility: string | null;
-    access_level: string | null;
-    download_count: number | null;
-    last_downloaded: Date | null;
-    last_viewed: Date | null;
-    rating: number | null;
-    feedback: string | null;
-    is_archived: boolean | null;
-    archive_reason: string | null;
-    archive_date: Date | null;
-    restore_date: Date | null;
-    metadata: Record<string, unknown> | null;
+    uploaded_at: Date | null;
     created_at: Date | null;
     updated_at: Date | null;
   };
@@ -195,12 +160,12 @@ export async function POST(
     const body: ResumeCreateData = await request.json();
 
     // Validate required fields
-    if (!body.title || !body.file_url || !body.file_name || !body.file_size || !body.file_type) {
+    if (!body.resume_url || !body.original_filename || !body.file_size || !body.file_type) {
       return NextResponse.json(
         {
           success: false,
           error: 'VALIDATION_ERROR',
-          message: 'Title, file_url, file_name, file_size, and file_type are required'
+          message: 'resume_url, original_filename, file_size, and file_type are required'
         } as ResumeErrorResponse,
         { status: 400 }
       );
@@ -218,78 +183,7 @@ export async function POST(
       );
     }
 
-    // Validate dates if provided
-    let lastDownloaded: Date | undefined;
-    if (body.last_downloaded) {
-      lastDownloaded = new Date(body.last_downloaded);
-      if (isNaN(lastDownloaded.getTime())) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'VALIDATION_ERROR',
-            message: 'Invalid last_downloaded date format'
-          } as ResumeErrorResponse,
-          { status: 400 }
-        );
-      }
-    }
 
-    let lastViewed: Date | undefined;
-    if (body.last_viewed) {
-      lastViewed = new Date(body.last_viewed);
-      if (isNaN(lastViewed.getTime())) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'VALIDATION_ERROR',
-            message: 'Invalid last_viewed date format'
-          } as ResumeErrorResponse,
-          { status: 400 }
-        );
-      }
-    }
-
-    let archiveDate: Date | undefined;
-    if (body.archive_date) {
-      archiveDate = new Date(body.archive_date);
-      if (isNaN(archiveDate.getTime())) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'VALIDATION_ERROR',
-            message: 'Invalid archive_date format'
-          } as ResumeErrorResponse,
-          { status: 400 }
-        );
-      }
-    }
-
-    let restoreDate: Date | undefined;
-    if (body.restore_date) {
-      restoreDate = new Date(body.restore_date);
-      if (isNaN(restoreDate.getTime())) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'VALIDATION_ERROR',
-            message: 'Invalid restore_date format'
-          } as ResumeErrorResponse,
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate rating if provided
-    if (body.rating !== undefined && (body.rating < 0 || body.rating > 5)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Rating must be between 0 and 5'
-        } as ResumeErrorResponse,
-        { status: 400 }
-      );
-    }
 
     // If this is marked as primary, unmark other resumes as primary
     if (body.is_primary) {
@@ -305,30 +199,12 @@ export async function POST(
     const newResume = await prisma.resume.create({
       data: {
         candidate_id: userId,
-        title: body.title,
-        file_url: body.file_url,
-        file_name: body.file_name,
+        resume_url: body.resume_url,
+        original_filename: body.original_filename,
         file_size: body.file_size,
         file_type: body.file_type,
         is_primary: body.is_primary || false,
-        description: body.description,
-        tags: body.tags || [],
-        version: body.version || '1.0',
-        created_by: body.created_by || userId,
-        updated_by: body.updated_by || userId,
-        status: body.status || 'active',
-        visibility: body.visibility || 'public',
-        access_level: body.access_level || 'read',
-        download_count: body.download_count || 0,
-        last_downloaded: lastDownloaded,
-        last_viewed: lastViewed,
-        rating: body.rating,
-        feedback: body.feedback,
-        is_archived: body.is_archived || false,
-        archive_reason: body.archive_reason,
-        archive_date: archiveDate,
-        restore_date: restoreDate,
-        metadata: body.metadata || {}
+        is_allow_fetch: body.is_allow_fetch !== undefined ? body.is_allow_fetch : true
       }
     });
 

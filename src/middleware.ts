@@ -17,7 +17,9 @@ const publicRoutes = [
   '/api/auth/login',
   '/api/auth/send-verification',
   '/api/auth/verify-email',
-  '/api/auth/refresh-token'
+  '/api/auth/refresh-token',
+  '/auth/callback',
+  '/auth/auth-code-error'
 ];
 
 export function middleware(request: NextRequest) {

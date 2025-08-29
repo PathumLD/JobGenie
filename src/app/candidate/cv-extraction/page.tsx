@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
-import { FormSelect } from '@/components/ui/form-select';
+
 import { toast } from 'sonner';
 
 interface ExtractedBasicInfo {
@@ -235,45 +235,86 @@ export default function CVExtractionPage() {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      // Since cookies are httpOnly, we need to make the request without the Authorization header
-      // The server will automatically read the cookies
-      const response = await fetch('/api/candidate/profile/extract-cv', {
-        method: 'POST',
-        credentials: 'include', // This ensures cookies are sent with the request
-        body: formData,
+      // First check if user has an existing profile
+      const profileCheckResponse = await fetch('/api/candidate/profile/current', {
+        method: 'GET',
+        credentials: 'include',
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to extract CV data');
-      }
+      const hasExistingProfile = profileCheckResponse.ok;
 
-      const result: ExtractionResponse = await response.json();
-      
-      if (result.success) {
-        setExtractedData(result.data.extracted_data);
-        setExtractionSummary(result.data.extraction_summary);
+      if (hasExistingProfile) {
+        // User has existing profile, use merge API
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const response = await fetch('/api/candidate/profile/extract-and-merge-cv-optimized', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to process CV');
+        }
+
+        const result = await response.json();
         
-        // Save extracted data and resume file to localStorage for use in create-profile page
-        const dataToStore = {
-          extracted_data: result.data.extracted_data,
-          resumeFile: result.data.resumeFile // Include the resume file data
-        };
-        localStorage.setItem('cv_extraction_data', JSON.stringify(dataToStore));
-        
-        toast.success('CV data extracted successfully! You can now create your profile.');
-        
-        // Show success message with option to create profile
-        setTimeout(() => {
-          if (window.confirm('CV data extracted successfully! Would you like to go to the Create Profile page now?')) {
-            window.location.href = '/candidate/create-profile';
-          }
-        }, 1000);
+        if (result.success) {
+          toast.success('CV processed successfully! Your profile has been updated with new information.');
+          
+          // Redirect to upload CV page to show detailed results
+          setTimeout(() => {
+            if (window.confirm('CV processed successfully! Your profile has been updated. Would you like to view your profile now?')) {
+              window.location.href = '/candidate/view-profile';
+            } else {
+              window.location.href = '/candidate/upload-cv';
+            }
+          }, 1000);
+        } else {
+          throw new Error(result.message || 'Processing failed');
+        }
       } else {
-        throw new Error(result.message || 'Extraction failed');
+        // User doesn't have profile, use extraction API for new profile creation
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const response = await fetch('/api/candidate/profile/extract-cv', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to extract CV data');
+        }
+
+        const result: ExtractionResponse = await response.json();
+        
+        if (result.success) {
+          setExtractedData(result.data.extracted_data);
+          setExtractionSummary(result.data.extraction_summary);
+          
+          // Save extracted data and resume file to localStorage for use in create-profile page
+          const dataToStore = {
+            extracted_data: result.data.extracted_data,
+            resumeFile: result.data.resumeFile // Include the resume file data
+          };
+          localStorage.setItem('cv_extraction_data', JSON.stringify(dataToStore));
+          
+          toast.success('CV data extracted successfully! You can now create your profile.');
+          
+          // Show success message with option to create profile
+          setTimeout(() => {
+            if (window.confirm('CV data extracted successfully! Would you like to go to the Create Profile page now?')) {
+              window.location.href = '/candidate/create-profile';
+            }
+          }, 1000);
+        } else {
+          throw new Error(result.message || 'Extraction failed');
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during extraction');
@@ -283,8 +324,9 @@ export default function CVExtractionPage() {
   };
 
   const handleSaveProfile = async () => {
-    // TODO: Implement profile saving functionality
-    console.log('Saving profile with extracted data:', extractedData);
+    // Profile saving is handled by the create-profile page
+    // This function redirects to the create-profile page with extracted data
+    window.location.href = '/candidate/create-profile';
   };
 
   const resetForm = () => {

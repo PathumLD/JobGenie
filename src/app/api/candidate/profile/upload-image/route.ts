@@ -63,6 +63,7 @@ export async function POST(
     const file = formData.get('profile_image') as File;
 
     if (!file) {
+      console.error('No file found in form data. Available fields:', Array.from(formData.keys()));
       return NextResponse.json(
         {
           success: false,
@@ -74,7 +75,9 @@ export async function POST(
     }
 
     // Validate file type
+    console.log('File type:', file.type, 'File name:', file.name, 'File size:', file.size);
     if (!file.type.startsWith('image/')) {
+      console.error('Invalid file type:', file.type);
       return NextResponse.json(
         {
           success: false,
@@ -112,7 +115,7 @@ export async function POST(
       .from('candidate_profile_image')
       .upload(filePath, buffer, {
         contentType: file.type,
-        upsert: false,
+        upsert: true, // Allow overwriting existing files
       });
 
     if (uploadError) {

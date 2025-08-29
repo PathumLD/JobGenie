@@ -20,6 +20,36 @@ interface BasicInfo {
   about: string | null;
   country: string | null;
   city: string | null;
+  address: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  nic: string | null;
+  passport: string | null;
+  open_to_relocation: boolean | null;
+  willing_to_travel: boolean | null;
+  security_clearance: boolean | null;
+  visa_assistance_needed: boolean | null;
+  interview_ready: boolean | null;
+  expected_salary_min: number | null;
+  expected_salary_max: number | null;
+  salary_visibility: string | null;
+  notice_period: string | null;
+  availability_status: string | null;
+  availability_date: string | null;
+  work_authorization: string | null;
+  disability_status: string | null;
+  veteran_status: string | null;
+  pre_qualified: boolean | null;
+  total_years_experience: number | null;
+  work_availability: string | null;
+  currency: string | null;
+  pronouns: string | null;
+  remote_preference: string | null;
+  professional_summary: string | null;
+  skills: string | null;
+  certifications: string | null;
+  awards: string | null;
+  volunteer_experience: string | null;
   location: string | null;
   phone1: string;
   phone2: string | null;
@@ -355,7 +385,7 @@ export default function CreateProfilePage() {
       if (selectedImageFile) {
         try {
           const imageFormData = new FormData();
-          imageFormData.append('image', selectedImageFile);
+          imageFormData.append('profile_image', selectedImageFile);
 
           const imageResponse = await fetch('/api/candidate/profile/upload-image', {
             method: 'POST',
@@ -364,11 +394,12 @@ export default function CreateProfilePage() {
           });
 
           if (!imageResponse.ok) {
-            throw new Error('Failed to upload profile image');
+            const errorData = await imageResponse.json();
+            throw new Error(errorData.message || 'Failed to upload profile image');
           }
 
           const imageResult = await imageResponse.json();
-          imageUrl = imageResult.imageUrl;
+          imageUrl = imageResult.data?.profile_image_url;
           toast.success('Profile image uploaded successfully!');
         } catch (error) {
           console.error('Error uploading image:', error);
@@ -418,21 +449,25 @@ export default function CreateProfilePage() {
          profileFormData.append('extractedResume', extractedResumeFile);
        }
 
+      console.log('🔄 Sending profile update request...');
       const response = await fetch('/api/candidate/profile/update-profile', {
         method: 'PUT',
         credentials: 'include',
         body: profileFormData,
       });
 
+      console.log('📡 Response status:', response.status);
       toast.dismiss(loadingToast);
 
-             if (!response.ok) {
-         const errorData = await response.json();
-         throw new Error(errorData.error || 'Failed to save profile');
-       }
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Profile update failed:', errorData);
+        throw new Error(errorData.error || 'Failed to save profile');
+      }
 
-             const result = await response.json();
-       toast.success('Profile saved successfully!');
+      const result = await response.json();
+      console.log('✅ Profile update successful:', result);
+      toast.success('Profile saved successfully!');
       
       // Clean up localStorage and preview URL
       if (typeof window !== 'undefined') {
@@ -449,7 +484,7 @@ export default function CreateProfilePage() {
        toast.success(`Profile saved with ${totalRecords} records! Redirecting...`);
       
       setTimeout(() => {
-        router.push('/candidate/profile');
+        router.push('/candidate/view-profile');
       }, 3000);
       
          } catch (error) {
@@ -529,8 +564,8 @@ export default function CreateProfilePage() {
          </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormInput
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <FormInput
            label="First Name *"
            {...methods.register('basic_info.first_name', { required: true })}
            defaultValue={cvData?.extracted_data?.basic_info?.first_name || ''}
@@ -605,6 +640,11 @@ export default function CreateProfilePage() {
            defaultValue={cvData?.extracted_data?.basic_info?.city || ''}
          />
          <FormInput
+           label="Address"
+           {...methods.register('basic_info.address')}
+           defaultValue={cvData?.extracted_data?.basic_info?.address || ''}
+         />
+         <FormInput
            label="Years of Experience"
            type="number"
            {...methods.register('basic_info.years_of_experience', { valueAsNumber: true })}
@@ -624,27 +664,119 @@ export default function CreateProfilePage() {
            ]}
          />
        </div>
+
+       {/* Additional Personal Information */}
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <FormInput
+           label="Date of Birth"
+           type="date"
+           {...methods.register('basic_info.date_of_birth')}
+           defaultValue={cvData?.extracted_data?.basic_info?.date_of_birth || ''}
+         />
+         <FormSelect
+           label="Gender"
+           {...methods.register('basic_info.gender')}
+           defaultValue={cvData?.extracted_data?.basic_info?.gender || ''}
+           options={[
+             { value: '', label: 'Select Gender' },
+             { value: 'male', label: 'Male' },
+             { value: 'female', label: 'Female' },
+             { value: 'other', label: 'Other' },
+             { value: 'prefer_not_to_say', label: 'Prefer not to say' }
+           ]}
+         />
+         <FormInput
+           label="NIC Number"
+           {...methods.register('basic_info.nic')}
+           defaultValue={cvData?.extracted_data?.basic_info?.nic || ''}
+         />
+         <FormInput
+           label="Passport Number"
+           {...methods.register('basic_info.passport')}
+           defaultValue={cvData?.extracted_data?.basic_info?.passport || ''}
+         />
+         <FormSelect
+           label="Remote Preference"
+           {...methods.register('basic_info.remote_preference')}
+           defaultValue={cvData?.extracted_data?.basic_info?.remote_preference || 'flexible'}
+           options={[
+             { value: 'remote_only', label: 'Remote Only' },
+             { value: 'hybrid', label: 'Hybrid' },
+             { value: 'onsite', label: 'On-site Only' },
+             { value: 'flexible', label: 'Flexible' }
+           ]}
+         />
+       </div>
+
+       {/* Salary and Availability Information */}
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+         <FormInput
+           label="Expected Minimum Salary (LKR)"
+           type="number"
+           {...methods.register('basic_info.expected_salary_min', { valueAsNumber: true })}
+           defaultValue={cvData?.extracted_data?.basic_info?.expected_salary_min || 0}
+         />
+         <FormInput
+           label="Expected Maximum Salary (LKR)"
+           type="number"
+           {...methods.register('basic_info.expected_salary_max', { valueAsNumber: true })}
+           defaultValue={cvData?.extracted_data?.basic_info?.expected_salary_max || 0}
+         />
+       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <FormInput
+           label="Notice Period (Days)"
+           type="number"
+           {...methods.register('basic_info.notice_period', { valueAsNumber: true })}
+           defaultValue={cvData?.extracted_data?.basic_info?.notice_period || 30}
+         />
+       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <FormSelect
+           label="Availability Status"
+           {...methods.register('basic_info.availability_status')}
+           defaultValue={cvData?.extracted_data?.basic_info?.availability_status || 'available'}
+           options={[
+             { value: 'available', label: 'Available' },
+             { value: 'open_to_opportunities', label: 'Open to Opportunities' },
+             { value: 'not_looking', label: 'Not Looking' }
+           ]}
+         />
+         <FormInput
+           label="Available From"
+           type="date"
+           {...methods.register('basic_info.availability_date')}
+           defaultValue={cvData?.extracted_data?.basic_info?.availability_date || ''}
+         />
+       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <FormSelect
+           label="Work Availability"
+           {...methods.register('basic_info.work_availability')}
+           defaultValue={cvData?.extracted_data?.basic_info?.work_availability || 'full_time'}
+           options={[
+             { value: 'full_time', label: 'Full Time' },
+             { value: 'part_time', label: 'Part Time' },
+             { value: 'contract', label: 'Contract' },
+             { value: 'freelance', label: 'Freelance' },
+             { value: 'internship', label: 'Internship' },
+             { value: 'volunteer', label: 'Volunteer' }
+           ]}
+         />
+       </div>
        
        <div className="space-y-4">
          <div>
-           <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+           <label className="block text-sm font-medium text-gray-700 mb-2">Professional Summary</label>
            <textarea
-             {...methods.register('basic_info.bio')}
-             rows={3}
+             {...methods.register('basic_info.professional_summary')}
+             rows={4}
              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
              placeholder="Brief professional summary"
-             defaultValue={cvData?.extracted_data?.basic_info?.bio || ''}
-           />
-         </div>
-         
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-2">About</label>
-           <textarea
-             {...methods.register('basic_info.about')}
-             rows={4}
-             className="w-full px-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-             placeholder="Detailed description of your background, goals, and what you're looking for"
-             defaultValue={cvData?.extracted_data?.basic_info?.about || ''}
+             defaultValue={cvData?.extracted_data?.basic_info?.professional_summary || ''}
            />
          </div>
        </div>
@@ -1460,14 +1592,14 @@ export default function CreateProfilePage() {
                 <p className="text-gray-900">{formData.basic_info.years_of_experience || 'No data added'}</p>
               </div>
             </div>
-            <div className="mt-4">
+            {/* <div className="mt-4">
               <label className="text-sm font-medium text-gray-600">Bio</label>
               <p className="text-gray-900 mt-1">{formData.basic_info.bio || 'No data added'}</p>
             </div>
             <div className="mt-4">
               <label className="text-sm font-medium text-gray-600">About</label>
               <p className="text-gray-900 mt-1">{formData.basic_info.about || 'No data added'}</p>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 

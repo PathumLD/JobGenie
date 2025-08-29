@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserType } from '@/types/user';
 import { useRouter } from 'next/navigation';
+import { OAuthSessionHandler } from '@/components/candidate';
 
 export default function Home() {
   const router = useRouter()
@@ -16,6 +17,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100">
+      <OAuthSessionHandler />
       {/* Header */}
       <Header />
 

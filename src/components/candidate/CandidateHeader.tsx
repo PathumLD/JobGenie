@@ -35,26 +35,142 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
 
   const handleLogout = async () => {
     try {
+      // First, clear client-side storage immediately
+      setShowProfileDropdown(false);
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Get all cookies and clear them ALL
+      const allCookies = document.cookie.split(';');
+      const paths = ['/', '/candidate', '/api', '/auth'];
+      const domains = ['', '.localhost', '.local'];
+      
+      // Clear ALL cookies with different variations
+      allCookies.forEach(cookie => {
+        const eqPos = cookie.indexOf('=');
+        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+        if (name) {
+          paths.forEach(path => {
+            domains.forEach(domain => {
+              // Clear with different expiration formats
+              document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}; domain=${domain}`;
+              document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}`;
+              document.cookie = `${name}=; max-age=0; path=${path}; domain=${domain}`;
+              // Also try without domain specification
+              document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}`;
+              document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`;
+              document.cookie = `${name}=; max-age=0; path=${path}`;
+            });
+          });
+        }
+      });
+
+      // Also clear common cookies that might not be in document.cookie (httpOnly)
+      const commonCookies = [
+        'access_token', 'refresh_token', 'token', 'session', 'auth',
+        'next-auth.callback-url', 'next-auth.csrf-token', 'next-auth.session-token',
+        'next-auth.pkce.code-verifier', 'next-auth.pkce.state',
+        '_next_hmr_ref', 'next-auth.csrf-token', 'next-auth.callback-url'
+      ];
+
+      commonCookies.forEach(cookieName => {
+        paths.forEach(path => {
+          domains.forEach(domain => {
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}; domain=${domain}`;
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}`;
+            document.cookie = `${cookieName}=; max-age=0; path=${path}; domain=${domain}`;
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}`;
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`;
+            document.cookie = `${cookieName}=; max-age=0; path=${path}`;
+          });
+        });
+      });
+
+      // Try standard logout first
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include', // Include cookies in the request
+        credentials: 'include',
       });
       
       if (response.ok) {
-        // Clear any local state if needed
-        setShowProfileDropdown(false);
+        // Check if cookies are actually cleared
+        const remainingCookies = document.cookie;
+        const hasAuthCookies = remainingCookies.includes('access_token=') || 
+                              remainingCookies.includes('refresh_token=') ||
+                              remainingCookies.includes('token=') ||
+                              remainingCookies.includes('session=');
         
-        // Force a page reload to ensure all auth state is cleared
-        window.location.href = '/candidate/login';
+        if (hasAuthCookies || remainingCookies.length > 0) {
+          // Cookies still exist, try HTML format logout
+          console.log('Cookies still present, trying HTML format logout...');
+          const htmlResponse = await fetch('/api/auth/logout?format=html', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Accept': 'text/html'
+            }
+          });
+          
+          if (htmlResponse.ok) {
+            // HTML response will handle the redirect
+            return;
+          }
+        }
+        
+        // Add a small delay to ensure cookies are cleared
+        setTimeout(() => {
+          // Force a page reload to ensure all auth state is cleared
+          window.location.href = '/candidate/login';
+        }, 100);
       } else {
         console.error('Logout failed:', response.statusText);
+        // Try HTML format as fallback
+        try {
+          const htmlResponse = await fetch('/api/auth/logout?format=html', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Accept': 'text/html'
+            }
+          });
+          
+          if (htmlResponse.ok) {
+            // HTML response will handle the redirect
+            return;
+          }
+        } catch (htmlError) {
+          console.error('HTML logout also failed:', htmlError);
+        }
+        
         // Even if logout fails, redirect to login
-        window.location.href = '/candidate/login';
+        setTimeout(() => {
+          window.location.href = '/candidate/login';
+        }, 100);
       }
     } catch (error) {
       console.error('Logout error:', error);
+      // Try HTML format as last resort
+      try {
+        const htmlResponse = await fetch('/api/auth/logout?format=html', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Accept': 'text/html'
+          }
+        });
+        
+        if (htmlResponse.ok) {
+          // HTML response will handle the redirect
+          return;
+        }
+      } catch (htmlError) {
+        console.error('HTML logout also failed:', htmlError);
+      }
+      
       // Even if there's an error, redirect to login
-      window.location.href = '/candidate/login';
+      setTimeout(() => {
+        window.location.href = '/candidate/login';
+      }, 100);
     }
   };
 
@@ -199,7 +315,7 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
                 <CardContent className="p-2">
                   <div className="space-y-1">
                     <Link
-                      href="/candidate/profile"
+                      href="/candidate/view-profile"
                       className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

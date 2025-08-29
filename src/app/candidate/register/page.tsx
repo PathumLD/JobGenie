@@ -19,12 +19,7 @@ export default function CandidateRegisterPage() {
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Job Genie</h1>
             </div>
-            <div className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <a href="/auth/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                Sign in
-              </a>
-            </div>
+            
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { GoogleSignInButton } from './GoogleSignInButton';
 import type { CandidateRegistrationRequest } from '@/types/api';
 
 interface CandidateRegistrationFormProps {
@@ -432,6 +433,37 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
           'Create Account'
         )}
       </Button>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">or</span>
+        </div>
+      </div>
+
+      {/* Google Sign-In Button */}
+      <GoogleSignInButton 
+        onError={(error) => setErrorMessage(`Google Sign-In failed: ${error}`)}
+      />
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">Already have an account?</span>
+        </div>
+      </div>
+
+      <div className="text-center">
+        <a href="/candidate/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
+          Sign in here
+        </a>
+      </div>
 
       {/* Terms and Privacy */}
       <p className="text-xs text-gray-500 text-center">

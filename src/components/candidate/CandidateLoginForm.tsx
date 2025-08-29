@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
+import { GoogleSignInButton } from './GoogleSignInButton';
 import Link from 'next/link';
 
 interface LoginFormData {
@@ -180,6 +181,19 @@ export function CandidateLoginForm() {
             )}
           </Button>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">or</span>
+          </div>
+        </div>
+
+        <GoogleSignInButton 
+          onError={(error) => setErrors({ general: `Google Sign-In failed: ${error}` })}
+        />
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">

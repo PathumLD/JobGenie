@@ -63,7 +63,7 @@ export default function Home() {
                     }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
-                    Let&apos;s Get Started
+                    Signup as Candidate
                   </Button>
                 </CardContent>
               </Card>
@@ -109,7 +109,7 @@ export default function Home() {
                     onClick={() => handleUserTypeSelection('employer')}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
-                    Let&apos;s Get Started
+                    Signup as Employer
                   </Button>
                 </CardContent>
               </Card>

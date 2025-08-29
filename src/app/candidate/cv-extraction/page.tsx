@@ -248,7 +248,7 @@ export default function CVExtractionPage() {
         const formData = new FormData();
         formData.append('file', selectedFile);
 
-        const response = await fetch('/api/candidate/profile/extract-and-merge-cv-optimized', {
+        const response = await fetch('/api/candidate/profile/extract-and-merge-cv', {
           method: 'POST',
           credentials: 'include',
           body: formData,

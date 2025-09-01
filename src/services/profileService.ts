@@ -1,3 +1,5 @@
+import { authenticatedFetch } from '@/lib/auth-storage';
+
 interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -12,7 +14,7 @@ export class ProfileService {
     data?: Record<string, unknown>
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(endpoint, {
+      const response = await authenticatedFetch(endpoint, {
         method,
         headers: {
           'Content-Type': 'application/json',

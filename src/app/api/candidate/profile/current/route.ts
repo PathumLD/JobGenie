@@ -232,23 +232,23 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 3,
         data: {
           type: 'experience',
-          experiences: candidate.work_experiences.map((exp: any) => ({
-            id: exp.id,
-            title: exp.title,
-            company: exp.company,
-            employment_type: exp.employment_type,
-            is_current: exp.is_current,
-            start_date: exp.start_date,
-            end_date: exp.end_date,
-            location: exp.location,
-            description: exp.description,
-            media_url: exp.media_url,
-            skill_ids: exp.skill_ids,
-            accomplishments: exp.accomplishments.map((acc: any) => ({
-              id: acc.id,
-              title: acc.title,
-              description: acc.description,
-              created_at: acc.created_at
+          experiences: candidate.work_experiences.map((exp: Record<string, unknown>) => ({
+            id: exp.id as string,
+            title: exp.title as string,
+            company: exp.company as string,
+            employment_type: exp.employment_type as 'full_time' | 'part_time' | 'contract' | 'internship' | 'freelance' | 'volunteer' | null,
+            is_current: exp.is_current as boolean,
+            start_date: exp.start_date as Date,
+            end_date: exp.end_date as Date | null,
+            location: exp.location as string | null,
+            description: exp.description as string | null,
+            media_url: exp.media_url as string | null,
+            skill_ids: exp.skill_ids as string[],
+            accomplishments: (exp.accomplishments as Record<string, unknown>[]).map((acc: Record<string, unknown>) => ({
+              id: acc.id as string,
+              title: acc.title as string,
+              description: acc.description as string,
+              created_at: acc.created_at as Date
             }))
           }))
         }

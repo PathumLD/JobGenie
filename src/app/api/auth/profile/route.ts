@@ -1,25 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import type { ProfileResponse, ApiErrorResponse } from '@/types/api';
-import { extractUserDataFromHeaders } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest): Promise<NextResponse<ProfileResponse | ApiErrorResponse>> {
   try {
-    // Get user information from middleware headers
-    const userData = extractUserDataFromHeaders(request.headers);
+    // Extract and verify JWT token
+    const token = getTokenFromHeaders(request);
     
-    if (!userData.userId || !userData.email || !userData.role || !userData.userType) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized. Please log in again.' },
+        { error: 'Authentication token required' },
+        { status: 401 }
+      );
+    }
+
+    const decodedToken = verifyToken(token);
+    
+    if (!decodedToken) {
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
         { status: 401 }
       );
     }
 
     // Find user with profile information
     const user = await prisma.user.findUnique({
-      where: { id: userData.userId },
+      where: { id: decodedToken.userId },
       include: {
         candidate: true,
         employer: {

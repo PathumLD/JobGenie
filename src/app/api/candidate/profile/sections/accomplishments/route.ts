@@ -4,6 +4,9 @@ import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
+
 // Types based on Prisma schema
 interface AccomplishmentData {
   id?: string;

@@ -37,7 +37,7 @@ export function AuthGuard({
         
       } catch (error) {
         console.error('Auth check failed:', error);
-        tokenStorage.clearTokens();
+        tokenStorage.clearAccessToken();
         router.push(redirectTo);
       } finally {
         setIsChecking(false);

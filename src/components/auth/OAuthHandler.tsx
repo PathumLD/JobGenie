@@ -8,14 +8,55 @@ export function OAuthHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    // Try to initialize authentication from URL parameters
-    const initialized = initializeAuthFromUrl();
-    
-    if (initialized) {
-      console.log('OAuth authentication successful - redirecting to dashboard');
-      // Redirect to the main candidate page after successful OAuth
-      router.push('/candidate/jobs');
-    }
+    const checkAuthAndProfile = async () => {
+      // Try to initialize authentication from URL parameters
+      const initialized = initializeAuthFromUrl();
+      
+      if (initialized) {
+        console.log('OAuth authentication successful - checking profile completion...');
+        
+        try {
+          // Get the access token from storage
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            // Check profile completion before redirecting
+            const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (profileCheckResponse.ok) {
+              const profileData = await profileCheckResponse.json();
+              if (profileData.success && profileData.isProfileComplete) {
+                // Profile is complete, redirect to jobs page
+                console.log('✅ Profile complete, redirecting to jobs page...');
+                router.push('/candidate/jobs');
+              } else {
+                // Profile incomplete, redirect to complete profile page
+                console.log('⚠️ Profile incomplete, redirecting to complete profile page...');
+                router.push('/candidate/complete-profile');
+              }
+            } else {
+              // If profile check fails, redirect to complete profile page as fallback
+              console.warn('⚠️ Profile check failed, redirecting to complete profile page...');
+              router.push('/candidate/complete-profile');
+            }
+          } else {
+            // No token found, redirect to complete profile page as fallback
+            console.warn('⚠️ No access token found, redirecting to complete profile page...');
+            router.push('/candidate/complete-profile');
+          }
+        } catch (profileError) {
+          console.error('Profile completion check error:', profileError);
+          // If profile check fails, redirect to complete profile page as fallback
+          router.push('/candidate/complete-profile');
+        }
+      }
+    };
+
+    checkAuthAndProfile();
   }, [router]);
 
   return (

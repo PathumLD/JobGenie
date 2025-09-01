@@ -32,9 +32,36 @@ export function OAuthSessionHandler() {
             const cleanUrl = window.location.pathname;
             window.history.replaceState({}, document.title, cleanUrl);
             
-            // Redirect to jobs page
-            console.log('✅ Redirecting to jobs page...');
-            router.push('/candidate/jobs');
+            // Check profile completion before redirecting
+            try {
+              const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+                headers: {
+                  'Authorization': `Bearer ${tempToken}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (profileCheckResponse.ok) {
+                const profileData = await profileCheckResponse.json();
+                if (profileData.success && profileData.isProfileComplete) {
+                  // Profile is complete, redirect to jobs page
+                  console.log('✅ Profile complete, redirecting to jobs page...');
+                  router.push('/candidate/jobs');
+                } else {
+                  // Profile incomplete, redirect to complete profile page
+                  console.log('⚠️ Profile incomplete. Missing fields:', profileData.missingFields);
+                  router.push('/candidate/complete-profile');
+                }
+              } else {
+                // If profile check fails, redirect to complete profile page as fallback
+                console.warn('⚠️ Profile check failed, redirecting to complete profile page...');
+                router.push('/candidate/complete-profile');
+              }
+            } catch (profileError) {
+              console.error('Profile completion check error:', profileError);
+              // If profile check fails, redirect to complete profile page as fallback
+              router.push('/candidate/complete-profile');
+            }
           } catch (tokenError) {
             console.error('Token storage error:', tokenError);
             setError('Failed to store authentication token');
@@ -75,8 +102,37 @@ export function OAuthSessionHandler() {
               
               // Clean up the URL by removing the hash
               window.history.replaceState({}, document.title, window.location.pathname);
-              // Redirect to jobs page
-              router.push('/candidate/jobs');
+              
+              // Check profile completion before redirecting
+              try {
+                const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+                  headers: {
+                    'Authorization': `Bearer ${data.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+
+                if (profileCheckResponse.ok) {
+                  const profileData = await profileCheckResponse.json();
+                  if (profileData.success && profileData.isProfileComplete) {
+                    // Profile is complete, redirect to jobs page
+                    console.log('✅ Profile complete, redirecting to jobs page...');
+                    router.push('/candidate/jobs');
+                  } else {
+                    // Profile incomplete, redirect to complete profile page
+                    console.log('⚠️ Profile incomplete. Missing fields:', profileData.missingFields);
+                    router.push('/candidate/complete-profile');
+                  }
+                } else {
+                  // If profile check fails, redirect to complete profile page as fallback
+                  console.warn('⚠️ Profile check failed, redirecting to complete profile page...');
+                  router.push('/candidate/complete-profile');
+                }
+              } catch (profileError) {
+                console.error('Profile completion check error:', profileError);
+                // If profile check fails, redirect to complete profile page as fallback
+                router.push('/candidate/complete-profile');
+              }
             } else {
               const errorData = await response.json();
               console.error('Session sync failed:', errorData);

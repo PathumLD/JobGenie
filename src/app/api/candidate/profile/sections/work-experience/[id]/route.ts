@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, EmploymentType } from '@prisma/client';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 // Types based on Prisma schema
 interface WorkExperienceUpdateData {
@@ -51,7 +54,7 @@ export async function GET(
 ): Promise<NextResponse<WorkExperienceResponse | WorkExperienceErrorResponse>> {
   try {
     const { id } = await params;
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(
@@ -126,7 +129,7 @@ export async function PUT(
 ): Promise<NextResponse<WorkExperienceResponse | WorkExperienceErrorResponse>> {
   try {
     const { id } = await params;
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(
@@ -221,7 +224,7 @@ export async function PUT(
       });
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (body.title !== undefined) updateData.title = body.title;
     if (body.employment_type !== undefined) updateData.employment_type = body.employment_type;
     if (body.is_current !== undefined) updateData.is_current = body.is_current;
@@ -267,7 +270,7 @@ export async function DELETE(
 ): Promise<NextResponse<{ success: boolean; message: string } | WorkExperienceErrorResponse>> {
   try {
     const { id } = await params;
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(

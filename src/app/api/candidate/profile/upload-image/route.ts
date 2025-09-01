@@ -5,6 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 
 const prisma = new PrismaClient();
 
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
+
 // Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

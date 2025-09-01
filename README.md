@@ -1,36 +1,176 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Job Genie
 
-## Getting Started
+A modern job platform built with Next.js, Prisma, and Supabase.
 
-First, run the development server:
+## 🚀 Quick Start
 
+### Prerequisites
+- Node.js 18+
+- PostgreSQL 15+
+- Git
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd job-genie
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp env-template.txt .env.local
+   # Edit .env.local with your configuration
+   ```
+
+4. **Set up the database**
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev
+   npm run seed:isco
+   ```
+
+5. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+Open [http://localhost:3000](http://localhost:3000) to view the application.
+
+## 🏗️ Build for Production
+
+### Local Build
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Docker Build
+```bash
+docker build -t job-genie .
+docker run -p 3000:3000 job-genie
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🌐 Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project is configured for deployment on multiple platforms:
 
-## Learn More
+### Vercel (Recommended)
+```bash
+npm run deploy:vercel
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Netlify
+```bash
+npm run deploy:netlify
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Docker
+```bash
+npm run deploy:docker
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Traditional Hosting
+```bash
+npm run build
+npm start
+```
 
-## Deploy on Vercel
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📋 Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run deploy:vercel` - Deploy to Vercel
+- `npm run deploy:netlify` - Deploy to Netlify
+- `npm run deploy:docker` - Build and run Docker container
+- `npm run db:migrate` - Run database migrations
+- `npm run db:generate` - Generate Prisma client
+- `npm run db:seed` - Seed database with initial data
+- `npm run health` - Check application health
+
+## 🔧 Environment Variables
+
+Required environment variables:
+
+```env
+# Database
+DATABASE_URL=postgresql://username:password@host:port/database
+
+# JWT
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Optional
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+NEXT_PUBLIC_SITE_URL=your_site_url
+```
+
+## 🗄️ Database
+
+This project uses PostgreSQL with Prisma as the ORM.
+
+### Schema
+The database schema includes:
+- User management
+- Candidate profiles
+- Job listings
+- Application tracking
+- Interview management
+
+### Migrations
+```bash
+# Create a new migration
+npx prisma migrate dev --name migration_name
+
+# Apply migrations in production
+npx prisma migrate deploy
+```
+
+## 🧪 Testing
+
+```bash
+# Run health check
+npm run health
+
+# Check build
+npm run build
+```
+
+## 📚 Documentation
+
+- [Deployment Guide](./DEPLOYMENT.md)
+- [API Documentation](./API_DOCUMENTATION.md)
+- [Authentication Migration Summary](./AUTHENTICATION_MIGRATION_SUMMARY.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support and questions:
+- Check the [deployment guide](./DEPLOYMENT.md)
+- Review the [API documentation](./API_DOCUMENTATION.md)
+- Open an issue on GitHub

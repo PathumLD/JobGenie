@@ -4,6 +4,9 @@ import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
+
 // Types based on Prisma schema
 interface ResumeCreateData {
   resume_url: string;
@@ -14,32 +17,32 @@ interface ResumeCreateData {
   is_allow_fetch?: boolean;
 }
 
-interface ResumeUpdateData {
-  title?: string;
-  file_url?: string;
-  file_name?: string;
-  file_size?: number;
-  file_type?: string;
-  is_primary?: boolean;
-  description?: string;
-  tags?: string[];
-  version?: string;
-  created_by?: string;
-  updated_by?: string;
-  status?: string;
-  visibility?: string;
-  access_level?: string;
-  download_count?: number;
-  last_downloaded?: string;
-  last_viewed?: string;
-  rating?: number;
-  feedback?: string;
-  is_archived?: boolean;
-  archive_reason?: string;
-  archive_date?: string;
-  restore_date?: string;
-  metadata?: Record<string, unknown>;
-}
+// interface ResumeUpdateData {
+//   title?: string;
+//   file_url?: string;
+//   file_name?: string;
+//   file_size?: number;
+//   file_type?: string;
+//   is_primary?: boolean;
+//   description?: string;
+//   tags?: string[];
+//   version?: string;
+//   created_by?: string;
+//   updated_by?: string;
+//   status?: string;
+//   visibility?: string;
+//   access_level?: string;
+//   download_count?: number;
+//   last_downloaded?: string;
+//   last_viewed?: string;
+//   rating?: number;
+//   feedback?: string;
+//   is_archived?: boolean;
+//   archive_reason?: string;
+//   archive_date?: string;
+//   restore_date?: string;
+//   metadata?: Record<string, unknown>;
+// }
 
 interface ResumeResponse {
   success: boolean;

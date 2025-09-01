@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       // Update existing user with provider info if not already set
-      const updateData: any = {};
+      const updateData: Record<string, string> = {};
       if (!existingUser.provider_id) {
         updateData.provider = provider;
         updateData.provider_id = supabase_user_id;

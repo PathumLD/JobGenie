@@ -11,7 +11,9 @@ export function CandidateLayoutWrapper({ children }: CandidateLayoutWrapperProps
   const pathname = usePathname();
   
   // Don't wrap auth pages with CandidateLayout
-  const isAuthPage = pathname === '/candidate/login' || pathname === '/candidate/register';
+  const isAuthPage = pathname === '/candidate/login' || 
+                    pathname === '/candidate/register' || 
+                    pathname === '/candidate/complete-profile';
   
   if (isAuthPage) {
     return <>{children}</>;

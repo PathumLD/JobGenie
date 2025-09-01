@@ -180,35 +180,35 @@ interface ExtractedData {
   accomplishments: ExtractedAccomplishment[];
 }
 
-// Enhanced duplicate detection functions
-async function isWorkExperienceDuplicate(
-  candidateId: string, 
-  workExp: ExtractedWorkExperience
-): Promise<boolean> {
-  const existing = await prisma.workExperience.findFirst({
-    where: {
-      candidate_id: candidateId,
-      title: { equals: workExp.title, mode: 'insensitive' },
-      company: { equals: workExp.company, mode: 'insensitive' },
-      employment_type: workExp.employment_type as any,
-    }
-  });
-  return !!existing;
-}
+// Enhanced duplicate detection functions (unused but kept for future reference)
+// async function isWorkExperienceDuplicate(
+//   candidateId: string, 
+//   workExp: ExtractedWorkExperience
+// ): Promise<boolean> {
+//   const existing = await prisma.workExperience.findFirst({
+//     where: {
+//       candidate_id: candidateId,
+//       title: { equals: workExp.title, mode: 'insensitive' },
+//       company: { equals: workExp.company, mode: 'insensitive' },
+//       employment_type: workExp.employment_type as any,
+//     }
+//   });
+//   return !!existing;
+// }
 
-async function isEducationDuplicate(
-  candidateId: string, 
-  education: ExtractedEducation
-): Promise<boolean> {
-  const existing = await prisma.education.findFirst({
-    where: {
-      candidate_id: candidateId,
-      degree_diploma: { equals: education.degree_diploma, mode: 'insensitive' },
-      university_school: { equals: education.university_school, mode: 'insensitive' },
-    }
-  });
-  return !!existing;
-}
+// async function isEducationDuplicate(
+//   candidateId: string, 
+//   education: ExtractedEducation
+// ): Promise<boolean> {
+//   const existing = await prisma.education.findFirst({
+//     where: {
+//       candidate_id: candidateId,
+//       degree_diploma: { equals: education.degree_diploma, mode: 'insensitive' },
+//       university_school: { equals: education.university_school, mode: 'insensitive' },
+//     }
+//   });
+//   return !!existing;
+// }
 
 async function isCertificateDuplicate(
   candidateId: string, 
@@ -278,23 +278,23 @@ async function isLanguageDuplicate(
   return !!existing;
 }
 
-async function isSkillDuplicate(
-  candidateId: string, 
-  skill: ExtractedSkill
-): Promise<boolean> {
-  const existing = await prisma.candidateSkill.findFirst({
-    where: {
-      candidate_id: candidateId,
-      skill: {
-        name: { equals: skill.name, mode: 'insensitive' }
-      }
-    },
-    include: {
-      skill: true
-    }
-  });
-  return !!existing;
-}
+// async function isSkillDuplicate(
+//   candidateId: string, 
+//   skill: ExtractedSkill
+// ): Promise<boolean> {
+//   const existing = await prisma.candidateSkill.findFirst({
+//     where: {
+//       candidate_id: candidateId,
+//       skill: {
+//         name: { equals: skill.name, mode: 'insensitive' }
+//       }
+//     },
+//     include: {
+//       skill: true
+//     }
+//   });
+//   return !!existing;
+// }
 
 const getCVExtractionPrompt = () => `
 Extract candidate profile data from this CV and return STRICT JSON matching the EXACT structure:
@@ -605,7 +605,7 @@ export async function POST(request: NextRequest) {
         
         extractedData = JSON.parse(cleanedText);
         console.log('✅ JSON parsed successfully');
-      } catch (error) {
+      } catch (_error) {
         console.error('❌ Failed to parse AI response:', text);
         throw new Error('Invalid AI response format');
       }
@@ -648,12 +648,12 @@ export async function POST(request: NextRequest) {
         };
 
         // Update basic info (only if new data exists and current data is null/empty)
-        const basicInfoUpdates: any = {};
+        const basicInfoUpdates: Record<string, unknown> = {};
         let hasBasicInfoUpdates = false;
 
         for (const [key, value] of Object.entries(extractedData.basic_info)) {
           if (value !== null && value !== undefined && value !== '') {
-            const currentValue = (existingCandidate as any)[key];
+            const currentValue = (existingCandidate as Record<string, unknown>)[key];
             if (!currentValue || currentValue === '' || currentValue === null) {
               basicInfoUpdates[key] = value;
               hasBasicInfoUpdates = true;
@@ -701,7 +701,7 @@ export async function POST(request: NextRequest) {
                 candidate_id: payload.userId,
                 title: workExp.title,
                 company: workExp.company,
-                employment_type: workExp.employment_type as any,
+                employment_type: workExp.employment_type as 'full_time' | 'part_time' | 'contract' | 'internship' | 'freelance' | 'volunteer',
                 is_current: workExp.is_current,
                 start_date: new Date(workExp.start_date),
                 end_date: workExp.end_date ? new Date(workExp.end_date) : null,
@@ -953,8 +953,8 @@ export async function POST(request: NextRequest) {
               candidate_id: payload.userId,
               language: language.language,
               is_native: language.is_native,
-              oral_proficiency: language.oral_proficiency as any,
-              written_proficiency: language.written_proficiency as any,
+              oral_proficiency: language.oral_proficiency as 'basic' | 'conversational' | 'fluent' | 'native',
+              written_proficiency: language.written_proficiency as 'basic' | 'conversational' | 'fluent' | 'native',
               created_at: new Date(),
               updated_at: new Date(),
             }

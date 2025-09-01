@@ -45,29 +45,12 @@ export default function NotFound() {
         <div className="space-y-4">
           <button 
             onClick={handleGoBack}
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors mr-4"
+            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Go Back
           </button>
           
-          <Link 
-            href="/"
-            className="inline-block bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Go Home
-          </Link>
           
-          <div className="text-sm text-gray-500 mt-6">
-            <p>Or try one of these links:</p>
-            <div className="mt-2 space-x-4">
-              <Link href="/candidate/login" className="text-blue-600 hover:underline">
-                Login
-              </Link>
-              <Link href="/candidate/register" className="text-blue-600 hover:underline">
-                Register
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
     </div>

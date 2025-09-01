@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { PrismaClient, Prisma } from '@prisma/client';
 import type { ApiErrorResponse } from '@/types/api';
 
@@ -82,7 +82,7 @@ interface JobFiltersResponse {
   };
 }
 
-export async function GET(request: NextRequest): Promise<NextResponse<JobFiltersResponse | ApiErrorResponse>> {
+export async function GET(): Promise<NextResponse<JobFiltersResponse | ApiErrorResponse>> {
   try {
     // Get all published jobs for counting
     const baseWhereClause: Prisma.JobWhereInput = { status: 'published' as const };

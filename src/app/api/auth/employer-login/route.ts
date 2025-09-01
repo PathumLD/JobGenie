@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import type { UserLoginResponse, ApiErrorResponse } from '@/types/api';
-import { generateAccessToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
@@ -97,18 +96,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
       where: { id: user.id },
       data: { last_login_at: new Date() }
     });
-
-    // Generate JWT tokens
-    const jwtPayload = {
-      userId: user.id,
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      role: 'employer' as const,
-      userType: 'employer' as const
-    };
-
-    const accessToken = generateAccessToken(jwtPayload);
 
     // Create response with employer-specific data
     const response = NextResponse.json(

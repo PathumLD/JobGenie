@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { ProfileService } from '@/services/profileService';
+import { authenticatedFetch } from '@/lib/auth-storage';
 
 interface ProfileImageUploadProps {
   currentImageUrl?: string | null;
@@ -53,7 +54,7 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       formData.append('profile_image', selectedFile);
 
       // Call the API to upload the image
-      const response = await fetch('/api/candidate/profile/upload-image', {
+      const response = await authenticatedFetch('/api/candidate/profile/upload-image', {
         method: 'POST',
         body: formData,
       });

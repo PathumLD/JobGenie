@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
+import { verifyTokenEdge, getTokenFromHeadersEdge } from '@/lib/jwt-edge';
 
 // Define protected routes and their allowed roles
 const protectedRoutes = {
   '/api/candidate/dashboard': ['candidate'],
+  '/api/candidate/profile': ['candidate'],
   '/api/candidate/list': ['mis', 'recruitment_agency'],
   '/api/employer': ['employer'],
   '/api/admin': ['mis', 'recruitment_agency'],
@@ -40,18 +41,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get the access token from cookies
-  const accessToken = request.cookies.get('access_token')?.value;
+  // Get the access token from Authorization header
+  const accessToken = getTokenFromHeadersEdge(request);
 
   if (!accessToken) {
     return NextResponse.json(
-      { error: 'Access token required' },
+      { error: 'Access token required. Please include Authorization header with Bearer token.' },
       { status: 401 }
     );
   }
 
   // Verify the JWT token
-  const decoded = verifyToken(accessToken);
+  const decoded = verifyTokenEdge(accessToken);
   if (!decoded) {
     return NextResponse.json(
       { error: 'Invalid or expired access token' },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 import { createClient } from '@supabase/supabase-js';
 
 const prisma = new PrismaClient();
@@ -30,7 +30,7 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<UploadImageResponse | UploadImageErrorResponse>> {
   try {
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(

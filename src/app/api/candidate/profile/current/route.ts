@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { CandidateProfileResponse, CandidateProfileErrorResponse, CandidateProfileSection } from '@/types/candidate-profile';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest
 ): Promise<NextResponse<CandidateProfileResponse | CandidateProfileErrorResponse>> {
   try {
-    // Get JWT token from cookies
-    const token = getTokenFromCookies(request);
+    // Get JWT token from Authorization header
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(

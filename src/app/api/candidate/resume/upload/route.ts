@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
-import * as jwt from 'jsonwebtoken';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -14,8 +17,13 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 interface JWTPayload {
   userId: string;
   email: string;
-  role: string;
-  exp: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  membership_no?: string;
+  role: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  exp?: number;
+  iat?: number;
 }
 
 interface ResumeUploadData {
@@ -238,30 +246,26 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Resume Upload API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -424,30 +428,26 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔄 Get Candidate Resumes API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -493,30 +493,26 @@ export async function PUT(request: NextRequest) {
   try {
     console.log('🔄 Resume Update API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -605,30 +601,26 @@ export async function DELETE(request: NextRequest) {
   try {
     console.log('🔄 Resume Delete API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { CandidateHeader } from './CandidateHeader';
 import { CandidateSidebar } from './CandidateSidebar';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 
 interface CandidateLayoutProps {
   children: React.ReactNode;
@@ -31,34 +32,36 @@ export function CandidateLayout({ children }: CandidateLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <CandidateSidebar expanded={sidebarExpanded} />
-      
-      {/* Header */}
-      <CandidateHeader 
-        isSidebarOpen={sidebarExpanded} 
-        onSidebarToggle={toggleSidebar} 
-      />
-      
-      {/* Main Content */}
-      <main 
-        className={`transition-all duration-300 ${
-          sidebarExpanded ? 'ml-64' : 'ml-16'
-        } pt-16`}
-      >
-        <div className="p-6">
-          {children}
-        </div>
-      </main>
-
-      {/* Mobile Overlay */}
-      {isMobile && sidebarExpanded && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setSidebarExpanded(false)}
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50">
+        {/* Sidebar */}
+        <CandidateSidebar expanded={sidebarExpanded} />
+        
+        {/* Header */}
+        <CandidateHeader
+          isSidebarOpen={sidebarExpanded}
+          onSidebarToggle={toggleSidebar}
         />
-      )}
-    </div>
+        
+        {/* Main Content */}
+        <main
+          className={`transition-all duration-300 ${
+            sidebarExpanded ? 'ml-64' : 'ml-16'
+          } pt-16`}
+        >
+          <div className="p-6">
+            {children}
+          </div>
+        </main>
+
+        {/* Mobile Overlay */}
+        {isMobile && sidebarExpanded && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setSidebarExpanded(false)}
+          />
+        )}
+      </div>
+    </AuthGuard>
   );
 }

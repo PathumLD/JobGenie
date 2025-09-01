@@ -208,17 +208,7 @@ export interface UserLoginResponse {
   user_type: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
 }
 
-// Refresh Token Request
-export interface RefreshTokenRequest {
-  refresh_token: string;
-}
 
-// Refresh Token Response
-export interface RefreshTokenResponse {
-  message: string;
-  access_token: string;
-  refresh_token: string;
-}
 
 // Logout Response
 export interface LogoutResponse {

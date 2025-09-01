@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import type { UserLoginResponse, ApiErrorResponse } from '@/types/api';
-import { generateAccessToken, generateRefreshToken, setJWTCookies } from '@/lib/jwt';
+import { generateAccessToken } from '@/lib/jwt';
 
 // Type guard to check if profile has membership_no
 function hasMembershipNo(profile: unknown): profile is { membership_no: string | number } {
@@ -128,12 +128,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
     };
 
     const accessToken = generateAccessToken(jwtPayload);
-    const refreshToken = generateRefreshToken(jwtPayload);
 
-    // Debug: Log JWT tokens
-    console.log('Generated JWT tokens:');
+    // Debug: Log JWT token
+    console.log('Generated JWT token:');
     console.log('Access Token:', accessToken);
-    console.log('Refresh Token:', refreshToken);
 
     // Create response
     const response = NextResponse.json(
@@ -157,21 +155,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
         },
         profile: profile,
         user_type: userType,
-        access_token: accessToken,
-        refresh_token: refreshToken
+        access_token: accessToken
       },
       { status: 200 }
     );
 
-    // Set JWT cookies and return response
-    const responseWithCookies = setJWTCookies(response, accessToken, refreshToken);
+    // Return response with tokens in body (no cookies)
+    console.log('Login successful - tokens returned in response body');
     
-    // Debug: Log cookies being set
-    console.log('Cookies being set:');
-    console.log('Access Token Cookie:', responseWithCookies.cookies.get('access_token')?.value);
-    console.log('Refresh Token Cookie:', responseWithCookies.cookies.get('refresh_token')?.value);
-    
-    return responseWithCookies as NextResponse<UserLoginResponse | ApiErrorResponse>;
+    return response as NextResponse<UserLoginResponse | ApiErrorResponse>;
 
   } catch (error) {
     console.error('Login error:', error);

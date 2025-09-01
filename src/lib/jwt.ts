@@ -1,7 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { NextRequest, NextResponse } from 'next/server';
 
-// JWT payload interface
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const ACCESS_TOKEN_EXPIRY = '24h'; // 24 hours
+
+// JWT payload interface (for creating tokens)
 export interface JWTPayload {
   userId: string;
   email: string;
@@ -12,130 +14,68 @@ export interface JWTPayload {
   userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
 }
 
-// JWT configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-const ACCESS_TOKEN_EXPIRY = '1d'; // 1 day
-const REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
+// Decoded JWT interface (includes exp and iat from JWT library)
+export interface DecodedJWTPayload extends JWTPayload {
+  exp?: number;
+  iat?: number;
+}
 
 // Generate access token
-export const generateAccessToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
-};
-
-// Generate refresh token
-export const generateRefreshToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+export const generateAccessToken = (payload: DecodedJWTPayload): string => {
+  // Create a clean payload without exp and iat properties to avoid conflicts
+  const { exp, iat, ...cleanPayload } = payload;
+  return jwt.sign(cleanPayload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
 };
 
 // Verify JWT token
-export const verifyToken = (token: string): JWTPayload | null => {
+export const verifyToken = (token: string): DecodedJWTPayload | null => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    console.log('🔍 Verifying token...');
+    console.log('🔑 Token length:', token.length);
+    console.log('🔑 Token preview:', token.substring(0, 20) + '...');
+    console.log('🔑 JWT_SECRET available:', !!JWT_SECRET);
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedJWTPayload;
+    console.log('✅ Token verified successfully');
+    console.log('👤 Decoded payload:', { 
+      userId: decoded.userId, 
+      email: decoded.email, 
+      role: decoded.role,
+      exp: decoded.exp,
+      iat: decoded.iat
+    });
     return decoded;
-  } catch {
+  } catch (error) {
+    console.error('❌ Token verification failed:', error);
     return null;
   }
 };
 
-// Set JWT cookies in response
-export const setJWTCookies = <T>(
-  response: NextResponse<T>,
-  accessToken: string,
-  refreshToken: string
-): NextResponse<T> => {
-  // Set access token cookie (short-lived, httpOnly, secure in production)
-  response.cookies.set('access_token', accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day from now
-    path: '/'
-  });
-
-  // Set refresh token cookie (long-lived, httpOnly, secure in production)
-  response.cookies.set('refresh_token', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-    path: '/'
-  });
-
-  return response;
-};
-
-// Clear JWT cookies
-export const clearJWTCookies = (response: NextResponse): NextResponse => {
-  response.cookies.set('access_token', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-    path: '/'
-  });
-
-  response.cookies.set('refresh_token', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-    path: '/'
-  });
-
-  return response;
-};
-
-// Get JWT token from request cookies
-export const getTokenFromCookies = (request: NextRequest): string | null => {
-  return request.cookies.get('access_token')?.value || null;
-};
-
-// Get refresh token from request cookies
-export const getRefreshTokenFromCookies = (request: NextRequest): string | null => {
-  return request.cookies.get('refresh_token')?.value || null;
-};
-
-// Check if user has required role
-export const hasRequiredRole = (
-  userRole: string,
-  requiredRoles: string[]
-): boolean => {
-  return requiredRoles.includes(userRole);
-};
-
-// Role-based access control middleware helper
-export const validateRole = (
-  userRole: string,
-  allowedRoles: string[]
-): boolean => {
-  return allowedRoles.includes(userRole);
-};
-
-// Extract user data from request headers (set by middleware)
-export const extractUserDataFromHeaders = (headers: Headers) => {
-  return {
-    userId: headers.get('x-user-id'),
-    email: headers.get('x-user-email'),
-    firstName: headers.get('x-user-first-name'),
-    lastName: headers.get('x-user-last-name'),
-    membershipNo: headers.get('x-user-membership-no'),
-    role: headers.get('x-user-role'),
-    userType: headers.get('x-user-type')
-  };
-};
-
-// Get user data from JWT token (for direct token verification)
-export const getUserDataFromToken = (token: string) => {
+// Get user data from token
+export const getUserDataFromToken = (token: string): JWTPayload | null => {
   const decoded = verifyToken(token);
   if (!decoded) return null;
   
-  return {
-    userId: decoded.userId,
-    email: decoded.email,
-    firstName: decoded.first_name,
-    lastName: decoded.last_name,
-    membershipNo: decoded.membership_no,
-    role: decoded.role,
-    userType: decoded.userType
-  };
+  // Return clean payload without exp and iat
+  const { exp, iat, ...userData } = decoded;
+  return userData;
+};
+
+// Extract token from Authorization header
+export const getTokenFromHeaders = (request: Request): string | null => {
+  const authHeader = request.headers.get('authorization');
+  console.log('🔍 Extracting token from headers...');
+  console.log('📤 Authorization header:', authHeader);
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('❌ No valid Authorization header found');
+    return null;
+  }
+  
+  const token = authHeader.substring(7);
+  console.log('✅ Token extracted successfully');
+  console.log('🔑 Token length:', token.length);
+  console.log('🔑 Token preview:', token.substring(0, 20) + '...');
+  
+  return token;
 };

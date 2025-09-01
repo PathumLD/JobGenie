@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
@@ -63,7 +63,7 @@ export async function GET(
   request: NextRequest
 ): Promise<NextResponse<ProjectResponse | ProjectErrorResponse>> {
   try {
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(
@@ -123,7 +123,7 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ProjectResponse | ProjectErrorResponse>> {
   try {
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(

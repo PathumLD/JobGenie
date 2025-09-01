@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { authenticatedFetch } from '@/lib/auth-storage';
 
 interface Job {
   id: string;
@@ -35,7 +36,7 @@ export function CandidateDashboard() {
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch('/api/candidate/jobs?limit=6');
+      const response = await authenticatedFetch('/api/candidate/jobs?limit=6');
       if (response.ok) {
         const data = await response.json();
         setJobs(data.jobs);

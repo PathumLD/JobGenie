@@ -7,6 +7,7 @@ import { ProfileSection } from '@/components/candidate/ProfileSection';
 import { ProfileImageUpload } from '@/components/candidate/ProfileImageUpload';
 import { EditBasicInfoModal } from '@/components/candidate/EditBasicInfoModal';
 import { CandidateProfileResponse, BasicInfoSection } from '@/types/candidate-profile';
+import { authenticatedFetch } from '@/lib/auth-storage';
 
 export default function CandidateProfilePage() {
   const [profileData, setProfileData] = useState<CandidateProfileResponse['data'] | null>(null);
@@ -21,7 +22,7 @@ export default function CandidateProfilePage() {
         setLoading(true);
         
         // Fetch profile using the current user endpoint
-        const response = await fetch('/api/candidate/profile/current');
+        const response = await authenticatedFetch('/api/candidate/profile/current');
         const data = await response.json();
         
         if (data.success) {

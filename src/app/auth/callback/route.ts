@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 // Helper function to handle user creation/update
 async function syncUserSession(sessionData: any, origin: string) {
   const { supabase: serverSupabase } = await import('@/lib/supabase');
-  const { generateAccessToken, generateRefreshToken } = await import('@/lib/jwt');
+  const { generateAccessToken } = await import('@/lib/jwt');
   const { PrismaClient } = await import('@prisma/client');
   const { generateMembershipNumberFromUserId } = await import('@/lib/membership');
 
@@ -46,10 +46,9 @@ async function syncUserSession(sessionData: any, origin: string) {
     };
 
     const accessToken = generateAccessToken(jwtPayload);
-    const refreshToken = generateRefreshToken(jwtPayload);
 
     await prisma.$disconnect();
-    return { user, accessToken, refreshToken };
+    return { user, accessToken };
   } catch (error) {
     await prisma.$disconnect();
     throw error;
@@ -155,15 +154,17 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ PKCE flow: Successfully exchanged code for session');
     
-    const { accessToken, refreshToken } = await syncUserSession(data.session, origin);
+    const { accessToken } = await syncUserSession(data.session, origin);
     
     console.log('✅ PKCE flow: Session sync successful, redirecting...');
     
-    const response = createRedirectResponse(origin, next, request);
+    // Store the access token in sessionStorage temporarily for the OAuthSessionHandler to pick up
+    // The OAuthSessionHandler will handle storing it in localStorage
+    const redirectUrl = `${next}?oauth_success=true&temp_token=${accessToken}`;
+    const response = createRedirectResponse(origin, redirectUrl, request);
     
-    // Set JWT cookies
-    const { setJWTCookies } = await import('@/lib/jwt');
-    return setJWTCookies(response, accessToken, refreshToken);
+    console.log('✅ PKCE flow: Redirecting to complete OAuth flow');
+    return response;
 
   } catch (syncError) {
     console.error('❌ PKCE flow: Session sync error:', syncError);

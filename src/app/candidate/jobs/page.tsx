@@ -1,7 +1,26 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { OAuthHandler } from '@/components/auth/OAuthHandler';
+import { useEffect, useState } from 'react';
 
 export default function CandidateJobsPage() {
+  const [shouldHandleOAuth, setShouldHandleOAuth] = useState(false);
+
+  useEffect(() => {
+    // Check if URL contains OAuth success parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthSuccess = urlParams.get('oauth_success');
+    const tempToken = urlParams.get('temp_token');
+    const hasOAuthSuccess = oauthSuccess === 'true' && tempToken;
+    setShouldHandleOAuth(!!hasOAuthSuccess);
+  }, []);
+
+  // If OAuth tokens are present, show the OAuth handler
+  if (shouldHandleOAuth) {
+    return <OAuthHandler />;
+  }
   return (
     <div className="space-y-6">
       {/* Page Header */}

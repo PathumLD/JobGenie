@@ -1,6 +1,36 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function NotFound() {
+  const router = useRouter();
+
+  const handleGoBack = () => {
+    // Check if there's a previous page in browser history
+    if (window.history.length > 1) {
+      try {
+        // Check if the previous page is not the same as current (to avoid infinite loops)
+        const currentPath = window.location.pathname;
+        const referrer = document.referrer;
+        
+        if (referrer && !referrer.includes(currentPath)) {
+          router.back();
+        } else {
+          // If referrer is same page or invalid, go to home
+          router.push('/');
+        }
+      } catch (error) {
+        // If router.back() fails, try to go to home
+        console.log('Failed to go back, redirecting to home');
+        router.push('/');
+      }
+    } else {
+      // If no previous page, go to home
+      router.push('/');
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full text-center">
@@ -13,14 +43,21 @@ export default function NotFound() {
         </div>
         
         <div className="space-y-4">
+          <button 
+            onClick={handleGoBack}
+            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors mr-4"
+          >
+            Go Back
+          </button>
+          
           <Link 
             href="/"
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-block bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
           >
             Go Home
           </Link>
           
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 mt-6">
             <p>Or try one of these links:</p>
             <div className="mt-2 space-x-4">
               <Link href="/candidate/login" className="text-blue-600 hover:underline">

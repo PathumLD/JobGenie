@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import type { UserLoginResponse, ApiErrorResponse } from '@/types/api';
-import { generateAccessToken, generateRefreshToken, setJWTCookies } from '@/lib/jwt';
+import { generateAccessToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
@@ -109,7 +109,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
     };
 
     const accessToken = generateAccessToken(jwtPayload);
-    const refreshToken = generateRefreshToken(jwtPayload);
 
     // Create response with employer-specific data
     const response = NextResponse.json(
@@ -153,10 +152,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
       { status: 200 }
     );
 
-    // Set JWT cookies and return response
-    const responseWithCookies = setJWTCookies(response, accessToken, refreshToken);
+    // Return response with tokens in body (no cookies)
+    console.log('Employer login successful - tokens returned in response body');
     
-    return responseWithCookies as NextResponse<UserLoginResponse | ApiErrorResponse>;
+    return response as NextResponse<UserLoginResponse | ApiErrorResponse>;
 
   } catch (error) {
     console.error('Employer login error:', error);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { CandidateProfileResponse, CandidateProfileErrorResponse, CandidateProfileSection } from '@/types/candidate-profile';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
@@ -23,8 +23,8 @@ export async function GET(
       );
     }
 
-    // Get JWT token from cookies
-    const token = getTokenFromCookies(request);
+    // Get JWT token from Authorization header
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(

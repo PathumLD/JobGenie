@@ -143,3 +143,86 @@ export async function GET(request: NextRequest): Promise<NextResponse<ProfileRes
     await prisma.$disconnect();
   }
 }
+
+export async function PUT(request: NextRequest): Promise<NextResponse<ProfileResponse | ApiErrorResponse>> {
+  try {
+    // Extract and verify JWT token
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Authentication token required' },
+        { status: 401 }
+      );
+    }
+
+    const decodedToken = verifyToken(token);
+    
+    if (!decodedToken) {
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 }
+      );
+    }
+
+    // Parse request body
+    const body = await request.json();
+    
+    // Validate required fields
+    if (!body.first_name || !body.last_name) {
+      return NextResponse.json(
+        { error: 'First name and last name are required' },
+        { status: 400 }
+      );
+    }
+
+    // Update user information
+    const updatedUser = await prisma.user.update({
+      where: { id: decodedToken.userId },
+      data: {
+        first_name: body.first_name,
+        last_name: body.last_name,
+        address: body.address || null,
+        phone1: body.phone1 || null,
+        phone2: body.phone2 || null
+      }
+    });
+
+    return NextResponse.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        address: updatedUser.address,
+        phone1: updatedUser.phone1,
+        phone2: updatedUser.phone2,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        email_verified: updatedUser.email_verified,
+        last_login_at: updatedUser.last_login_at,
+        created_at: updatedUser.created_at,
+        updated_at: updatedUser.updated_at,
+        is_created: updatedUser.is_created
+      }
+    });
+
+  } catch (error) {
+    console.error('Profile update error:', error);
+    
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: 'Internal server error', message: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}

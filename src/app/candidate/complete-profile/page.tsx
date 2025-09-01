@@ -15,6 +15,7 @@ interface CandidateData {
   gender: string | null;
   date_of_birth: Date | null;
   address: string | null;
+  phone: string | null;
 }
 
 interface FormData {
@@ -25,6 +26,7 @@ interface FormData {
   gender: string;
   date_of_birth: string;
   address: string;
+  phone: string;
 }
 
 export default function CompleteProfilePage() {
@@ -40,7 +42,8 @@ export default function CompleteProfilePage() {
     nic: '',
     gender: '',
     date_of_birth: '',
-    address: ''
+    address: '',
+    phone: ''
   });
 
   useEffect(() => {
@@ -79,7 +82,8 @@ export default function CompleteProfilePage() {
               date_of_birth: data.candidateData.date_of_birth 
                 ? new Date(data.candidateData.date_of_birth).toISOString().split('T')[0] 
                 : '',
-              address: data.candidateData.address || ''
+              address: data.candidateData.address || '',
+              phone: data.candidateData.phone || ''
             });
           }
         } else {
@@ -116,7 +120,7 @@ export default function CompleteProfilePage() {
       }
 
       // Validate required fields
-      const requiredFields = ['first_name', 'last_name', 'email', 'nic', 'gender', 'date_of_birth', 'address'];
+      const requiredFields = ['first_name', 'last_name', 'email', 'nic', 'gender', 'date_of_birth', 'address', 'phone'];
       const missingFields = requiredFields.filter(field => !formData[field as keyof FormData]?.trim());
       
       if (missingFields.length > 0) {
@@ -138,12 +142,15 @@ export default function CompleteProfilePage() {
           nic: formData.nic,
           gender: formData.gender,
           date_of_birth: formData.date_of_birth,
-          address: formData.address
+          address: formData.address,
+          phone: formData.phone
         }),
       });
 
       if (response.ok) {
-        // Also update the user table with name if it came from Google
+        console.log('✅ Basic info updated successfully');
+        
+        // Also update the user table with name and address if it came from Google
         const userResponse = await fetch('/api/auth/profile', {
           method: 'PUT',
           headers: {
@@ -152,11 +159,19 @@ export default function CompleteProfilePage() {
           },
           body: JSON.stringify({
             first_name: formData.first_name,
-            last_name: formData.last_name
+            last_name: formData.last_name,
+            address: formData.address
           }),
         });
 
-        // Redirect to jobs page after successful update
+        if (userResponse.ok) {
+          console.log('✅ User profile updated successfully');
+        } else {
+          console.warn('⚠️ User profile update failed:', await userResponse.text());
+        }
+
+        // Profile updated successfully, redirect to jobs page
+        console.log('✅ Profile updated successfully, redirecting to jobs page...');
         router.push('/candidate/jobs');
       } else {
         const errorData = await response.json();
@@ -237,6 +252,16 @@ export default function CompleteProfilePage() {
                 value={formData.nic}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('nic', e.target.value)}
                 placeholder="Enter your NIC number"
+                required
+              />
+
+              <FormInput
+                label="Phone Number *"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('phone', e.target.value)}
+                placeholder="Enter your phone number"
                 required
               />
 

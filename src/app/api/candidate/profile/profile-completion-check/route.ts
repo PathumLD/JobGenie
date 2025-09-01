@@ -19,6 +19,7 @@ interface ProfileCompletionResponse {
     gender: string | null;
     date_of_birth: Date | null;
     address: string | null;
+    phone: string | null;
   };
   message: string;
 }
@@ -61,13 +62,14 @@ export async function GET(
 
     const userId = decodedToken.userId;
 
-    // Get user data for email
+    // Get user data for email and address
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         email: true,
         first_name: true,
-        last_name: true
+        last_name: true,
+        address: true
       }
     });
 
@@ -91,7 +93,8 @@ export async function GET(
         nic: true,
         gender: true,
         date_of_birth: true,
-        address: true
+        address: true,
+        phone1: true
       }
     });
 
@@ -103,7 +106,8 @@ export async function GET(
       { field: 'nic', value: candidate?.nic, label: 'NIC' },
       { field: 'gender', value: candidate?.gender, label: 'Gender' },
       { field: 'date_of_birth', value: candidate?.date_of_birth, label: 'Date of Birth' },
-      { field: 'address', value: candidate?.address, label: 'Address' }
+      { field: 'address', value: candidate?.address, label: 'Address' },
+      { field: 'phone', value: candidate?.phone1, label: 'Phone Number' }
     ];
 
     // Check which fields are missing
@@ -114,6 +118,11 @@ export async function GET(
       }
     });
 
+    console.log('🔍 Profile completion check for user:', userId);
+    console.log('📊 Required fields check:', requiredFields.map(f => ({ field: f.field, value: f.value, label: f.label })));
+    console.log('❌ Missing fields:', missingFields);
+
+    // Check if profile is complete based only on required fields
     const isProfileComplete = missingFields.length === 0;
 
     // Prepare candidate data for pre-filling form
@@ -124,7 +133,8 @@ export async function GET(
       nic: candidate?.nic ?? null,
       gender: candidate?.gender ?? null,
       date_of_birth: candidate?.date_of_birth ?? null,
-      address: candidate?.address ?? null
+      address: candidate?.address ?? null,
+      phone: candidate?.phone1 ?? null
     };
 
     return NextResponse.json({

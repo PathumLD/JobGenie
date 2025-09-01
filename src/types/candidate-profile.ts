@@ -38,6 +38,7 @@ export interface BasicInfoSection {
   linkedin_url?: string | null;
   github_url?: string | null;
   bio?: string | null;
+  about?: string | null;
   professional_summary?: string | null;
   availability_status?: 'available' | 'open_to_opportunities' | 'not_looking' | null;
   availability_date?: Date | null;
@@ -55,6 +56,24 @@ export interface BasicInfoSection {
   profile_completion_percentage?: number | null;
   completedProfile?: boolean | null;
   isApproved?: boolean | null;
+  // Additional fields from create-profile BasicInfo interface
+  date_of_birth?: Date | null;
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+  nic?: string | null;
+  passport?: string | null;
+  pronouns?: string | null;
+  disability_status?: string | null;
+  veteran_status?: string | null;
+  security_clearance?: boolean | null;
+  visa_assistance_needed?: boolean | null;
+  salary_visibility?: 'confidential' | 'range_only' | 'exact' | 'negotiable' | null;
+  expected_salary_min?: number | null;
+  expected_salary_max?: number | null;
+  currency?: string | null;
+  skills?: string | null;
+  certifications?: string | null;
+  awards?: string | null;
+  volunteer_experience?: string | null;
 }
 
 export interface AboutSection {

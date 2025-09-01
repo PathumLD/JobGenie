@@ -825,67 +825,127 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Update skills
+    // Update skills (optimized with bulk operations)
     if (updateData.skills && updateData.skills.length > 0) {
-      for (const skill of updateData.skills) {
-        if (skill.id) {
-          // Validate UUID format
-          if (!isValidUUID(skill.id)) {
-            console.error('❌ Invalid UUID format for skill:', skill.id);
-            continue;
-          }
+      console.log(`🔄 Processing ${updateData.skills.length} skills...`);
+      try {
+        // Separate skills into updates and creates
+        const skillsToUpdate = updateData.skills.filter(skill => skill.id && isValidUUID(skill.id));
+        const skillsToCreate = updateData.skills.filter(skill => !skill.id && skill.name);
+        
+        console.log(`📊 Skills to update: ${skillsToUpdate.length}, Skills to create: ${skillsToCreate.length}`);
 
-          try {
-            // Update existing record
-            const updatedSkill = await prisma.candidateSkill.update({
-              where: { id: skill.id },
+        // Bulk update existing skills
+        if (skillsToUpdate.length > 0) {
+          const updatePromises = skillsToUpdate.map(skill => 
+            prisma.candidateSkill.update({
+              where: { id: skill.id! },
               data: {
                 proficiency: skill.proficiency,
                 updated_at: new Date(),
               }
-            });
-            updatedRecords.skills.push(updatedSkill.id);
-            console.log('✅ Skill updated:', updatedSkill.id);
-          } catch (updateError) {
-            console.error('❌ Failed to update skill:', skill.id, updateError);
-            continue;
-          }
-        } else {
-          // Create new skill and candidate skill
-          try {
-            let skillRecord = await prisma.skill.findUnique({
-              where: { name: skill.name! }
-            });
+            }).catch(error => {
+              console.error('❌ Failed to update skill:', skill.id, error);
+              return null;
+            })
+          );
+          
+          const updateResults = await Promise.all(updatePromises);
+          const successfulUpdates = updateResults.filter(result => result !== null);
+          updatedRecords.skills.push(...successfulUpdates.map(skill => skill!.id));
+          console.log(`✅ ${successfulUpdates.length} skills updated in bulk`);
+        }
 
-            if (!skillRecord) {
-              skillRecord = await prisma.skill.create({
-                data: {
-                  name: skill.name!,
-                  category: skill.category,
-                  description: skill.description,
-                  is_active: true,
-                }
-              });
+        // Bulk create new skills
+        if (skillsToCreate.length > 0) {
+          // Get all existing skills to avoid duplicates
+          const existingSkills = await prisma.skill.findMany({
+            where: { 
+              name: { in: skillsToCreate.map(skill => skill.name!) }
             }
+          });
 
-            const newCandidateSkill = await prisma.candidateSkill.create({
-              data: {
-                candidate_id: payload.userId,
-                skill_id: skillRecord.id,
-                skill_source: 'manual_update',
-                proficiency: skill.proficiency || 50,
-                years_of_experience: 0,
-                source_title: 'Profile Update',
-                source_type: 'manual_update',
+          const existingSkillNames = new Set(existingSkills.map(skill => skill.name));
+          
+          // Create missing skills in bulk
+          const skillsToCreateInDb = skillsToCreate
+            .filter(skill => !existingSkillNames.has(skill.name!))
+            .map(skill => ({
+              name: skill.name!,
+              category: skill.category,
+              description: skill.description,
+              is_active: true,
+            }));
+
+          let newSkillRecords: any[] = [];
+          if (skillsToCreateInDb.length > 0) {
+            newSkillRecords = await prisma.skill.createMany({
+              data: skillsToCreateInDb,
+              skipDuplicates: true
+            }).then(() => 
+              prisma.skill.findMany({
+                where: { 
+                  name: { in: skillsToCreateInDb.map(skill => skill.name) }
+                }
+              })
+            );
+          }
+
+          // Combine existing and new skills
+          const allSkillRecords = [...existingSkills, ...newSkillRecords];
+          const skillMap = new Map(allSkillRecords.map(skill => [skill.name, skill]));
+
+          // Get existing candidate skills to avoid duplicates
+          const existingCandidateSkills = await prisma.candidateSkill.findMany({
+            where: {
+              candidate_id: payload.userId,
+              skill_id: { in: allSkillRecords.map(skill => skill.id) }
+            }
+          });
+
+          const existingCandidateSkillIds = new Set(
+            existingCandidateSkills.map(cs => cs.skill_id)
+          );
+
+          // Create candidate skills in bulk (only for non-existing combinations)
+          const candidateSkillsToCreate = skillsToCreate
+            .map(skill => {
+              const skillRecord = skillMap.get(skill.name!);
+              if (skillRecord && !existingCandidateSkillIds.has(skillRecord.id)) {
+                return {
+                  candidate_id: payload.userId,
+                  skill_id: skillRecord.id,
+                  skill_source: 'manual_update',
+                  proficiency: skill.proficiency || 50,
+                  years_of_experience: 0,
+                  source_title: 'Profile Update',
+                  source_type: 'manual_update',
+                };
               }
-            });
-            updatedRecords.skills.push(newCandidateSkill.id);
-            console.log('✅ New skill created:', newCandidateSkill.id);
-          } catch (createError) {
-            console.error('❌ Failed to create skill:', createError);
-            continue;
+              return null;
+            })
+            .filter((item): item is NonNullable<typeof item> => item !== null);
+
+          if (candidateSkillsToCreate.length > 0) {
+            const createdCandidateSkills = await prisma.candidateSkill.createMany({
+              data: candidateSkillsToCreate,
+              skipDuplicates: true
+            }).then(() =>
+              prisma.candidateSkill.findMany({
+                where: {
+                  candidate_id: payload.userId,
+                  skill_id: { in: candidateSkillsToCreate.map(cs => cs.skill_id) }
+                }
+              })
+            );
+
+            updatedRecords.skills.push(...createdCandidateSkills.map(skill => skill.id));
+            console.log(`✅ ${createdCandidateSkills.length} new skills created in bulk`);
           }
         }
+        console.log('✅ Skills processing completed');
+      } catch (skillError) {
+        console.error('❌ Error processing skills:', skillError);
       }
     }
 
@@ -1190,6 +1250,9 @@ export async function PUT(request: NextRequest) {
     console.log('✅ All related records updated successfully');
 
     // 10. Return updated profile data
+    console.log('✅ Profile update completed successfully');
+    console.log('📊 Updated records:', updatedRecords);
+    
     return NextResponse.json({
       success: true,
       message: 'Candidate profile updated successfully',

@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProfileSection } from '@/components/candidate/ProfileSection';
 import { ProfileImageUpload } from '@/components/candidate/ProfileImageUpload';
+import { EditBasicInfoModal } from '@/components/candidate/EditBasicInfoModal';
 import { CandidateProfileResponse, BasicInfoSection } from '@/types/candidate-profile';
 
 export default function CandidateProfilePage() {
@@ -12,6 +13,7 @@ export default function CandidateProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -84,11 +86,12 @@ export default function CandidateProfilePage() {
             <p className="text-sm text-gray-700">
               <strong>Tip:</strong> Make sure you have completed your profile setup.
             </p>
-          </div>
-        </div>
+                  </div>
       </div>
-    );
-  }
+
+    </div>
+  );
+}
 
   const basicInfoSection = profileData.sections.find(s => s.data.type === 'basic_info');
   const basicInfo = basicInfoSection?.data as BasicInfoSection;
@@ -115,9 +118,26 @@ export default function CandidateProfilePage() {
     }
   };
 
+  const handleBasicInfoUpdate = (updatedBasicInfo: BasicInfoSection) => {
+    if (profileData && basicInfoSection) {
+      const updatedProfileData = {
+        ...profileData,
+        sections: profileData.sections.map(section => 
+          section.id === basicInfoSection.id 
+            ? {
+                ...section,
+                data: updatedBasicInfo
+              }
+            : section
+        )
+      };
+      setProfileData(updatedProfileData);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl  mx-auto px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -125,12 +145,21 @@ export default function CandidateProfilePage() {
               <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
               <p className="text-gray-600 mt-2">Professional information and experience</p>
             </div>
+            <div>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditModalOpen(true)}
+              >
+                Edit Profile
+              </Button>
+            </div>
           </div>
         </div>
+        
 
         {/* Profile Overview */}
         <div className="mb-8">
-          <Card className="bg-white border-0 shadow-sm">
+          <Card className="bg-white border-0 shadow-md">
             <CardContent className="p-6">
               <div className="flex flex-col lg:flex-row items-start gap-6">
                 {/* Profile Photo Section */}
@@ -144,19 +173,28 @@ export default function CandidateProfilePage() {
                 {/* Profile Info Section */}
                 <div className="flex-1 min-w-0">
                   <div className="mb-4">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h3 className="text-3xl font-bold text-gray-900 ">
                       {basicInfo?.first_name} {basicInfo?.last_name}
                     </h3>
                     {basicInfo?.title && (
-                      <p className="text-lg text-gray-600 mb-1">{basicInfo.title}</p>
+                      <p className="text-sm text-gray-600 mb-1">{basicInfo.title}</p>
                     )}
                     {basicInfo?.current_position && (
                       <p className="text-gray-600 mb-1">{basicInfo.current_position}</p>
                     )}
-                    {basicInfo?.industry && (
+                    {/* {basicInfo?.industry && (
                       <p className="text-gray-500">{basicInfo.industry}</p>
-                    )}
+                    )} */}
                   </div>
+
+                  {/* Professional Summary */}
+                  {basicInfo?.professional_summary && (
+                    <div className="mb-4">
+                      <p className="text-gray-700 leading-relaxed">
+                        {basicInfo.professional_summary}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Contact & Location Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -169,22 +207,6 @@ export default function CandidateProfilePage() {
                         <span>{basicInfo.location}</span>
                       </div>
                     )}
-                    {/* {basicInfo?.work_availability && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2h4a2 2 0 002-2z" />
-                        </svg>
-                        <span>{basicInfo.work_availability.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span>
-                      </div>
-                    )} */}
-                    {/* {basicInfo?.availability_status && (
-                      <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
-                        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{basicInfo.availability_status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span>
-                      </div>
-                    )} */}
                   </div>
 
                   {/* Social Media Links */}
@@ -262,7 +284,7 @@ export default function CandidateProfilePage() {
         </div>
 
         {/* Profile Sections */}
-        <div className="space-y-6">
+        <div className="space-y-6 ">
           {profileData.sections
             .filter(section => section.data.type !== 'basic_info')
             .sort((a, b) => a.order - b.order)
@@ -271,6 +293,16 @@ export default function CandidateProfilePage() {
             ))}
         </div>
       </div>
+
+      {/* Edit Basic Info Modal */}
+      {basicInfo && (
+        <EditBasicInfoModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          basicInfo={basicInfo}
+          onUpdate={handleBasicInfoUpdate}
+        />
+      )}
     </div>
   );
 }

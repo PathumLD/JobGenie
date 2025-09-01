@@ -16,7 +16,7 @@ interface NavItem {
   children?: NavItem[];
 }
 
-export function CandidateSidebar({ expanded }: CandidateSidebarProps) {
+export function CandidateSidebar({ expanded }: Readonly<CandidateSidebarProps>) {
   const pathname = usePathname();
   const [expandedSections, setExpandedSections] = useState<string[]>(['dashboard']);
 
@@ -96,6 +96,8 @@ export function CandidateSidebar({ expanded }: CandidateSidebarProps) {
       ),
       children: [
         { label: 'Resume Builder', href: '/candidate/resume-builder', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
+        { label: 'Upload CV', href: '/candidate/upload-cv', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
+        { label: 'CV Extraction', href: '/candidate/cv-extraction', icon: <span className="w-2 h-2 bg-blue-400 rounded-full" /> },
         { label: 'Cover Letter', href: '/candidate/cover-letter', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Interview Prep', href: '/candidate/interview-prep', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Career Assessment', href: '/candidate/career-assessment', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> }

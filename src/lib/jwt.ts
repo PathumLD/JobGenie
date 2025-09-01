@@ -48,7 +48,7 @@ export const setJWTCookies = <T>(
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 24*60*60, // 1 day in seconds
+    expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day from now
     path: '/'
   });
 
@@ -57,7 +57,7 @@ export const setJWTCookies = <T>(
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     path: '/'
   });
 

@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileSectionData, BasicInfoSection as BasicInfoSectionType, AboutSection as AboutSectionType, ExperienceSection as ExperienceSectionType, EducationSection as EducationSectionType, SkillsSection as SkillsSectionType, ProjectsSection as ProjectsSectionType, CertificatesSection as CertificatesSectionType, LanguagesSection as LanguagesSectionType, AwardsSection as AwardsSectionType, VolunteeringSection as VolunteeringSectionType, AccomplishmentsSection as AccomplishmentsSectionType } from '@/types/candidate-profile';
 import { EditModal } from './EditModal';
 import { ProfileService } from '@/services/profileService';
-import { Edit, Plus, Trash2 } from 'lucide-react';
+import { Edit, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ProfileSectionProps {
   section: {
@@ -131,10 +132,53 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ section }) => {
   );
 };
 
+// Reusable component for sections with show more functionality
+const SectionWithShowMore: React.FC<{
+  items: any[];
+  renderItem: (item: any, index: number) => React.ReactNode;
+  maxItems?: number;
+}> = ({ items, renderItem, maxItems = 3 }) => {
+  const [showAll, setShowAll] = useState(false);
+  const hasMoreItems = items.length > maxItems;
+  const displayedItems = showAll ? items : items.slice(0, maxItems);
+
+  if (items.length === 0) {
+    return <div className="text-gray-500 text-center py-4">No items to display</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {displayedItems.map((item, index) => renderItem(item, index))}
+      
+      {hasMoreItems && (
+        <div className="flex justify-center pt-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowAll(!showAll)}
+            className="flex items-center gap-2"
+          >
+            {showAll ? (
+              <>
+                <ChevronUp size={16} />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                Show More ({items.length - maxItems} more)
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Basic Info Section Component
 const BasicInfoSectionComponent: React.FC<{ data: BasicInfoSectionType; onEdit: (data: Record<string, unknown>, id?: string) => void }> = ({ data, onEdit }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       {/* Profile Header */}
       <div className="text-center relative">
         <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
@@ -267,20 +311,6 @@ const BasicInfoSectionComponent: React.FC<{ data: BasicInfoSectionType; onEdit: 
 // About Section Component
 const AboutSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void }> = ({ data, onEdit }) => (
   <div className="space-y-4 relative">
-    <button
-      onClick={() => onEdit(data, '')}
-      className="absolute top-0 right-0 p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-      title="Edit about section"
-    >
-      <Edit size={16} />
-    </button>
-    
-    {data.about && (
-      <div>
-        <h4 className="font-medium text-gray-900 mb-2">About</h4>
-        <p className="text-gray-700 leading-relaxed">{data.about}</p>
-      </div>
-    )}
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {data.gender && (
@@ -301,14 +331,6 @@ const AboutSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>
           <p className="text-gray-900">{data.pronouns}</p>
         </div>
       )}
-      {data.expected_salary_min && data.expected_salary_max && (
-        <div>
-          <span className="text-sm font-medium text-gray-700">Salary Expectation:</span>
-          <p className="text-gray-900">
-            {data.expected_salary_min.toLocaleString()} - {data.expected_salary_max.toLocaleString()} {data.currency}
-          </p>
-        </div>
-      )}
     </div>
   </div>
 );
@@ -325,79 +347,84 @@ const ExperienceSection: React.FC<{ data: any; onEdit: (data: Record<string, unk
     return acc;
   }, {});
 
-  return (
-    <div className="space-y-6">
-      {Object.entries(experiencesByCompany).map(([company, companyExperiences]: [string, any]) => (
-        <div key={company} className="border border-gray-200 rounded-lg p-6 bg-white">
-          {/* Company Header */}
-          <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-semibold text-gray-600">
-                  {company.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">{company}</h3>
-              </div>
-            </div>
+  const renderCompanyExperiences = (company: string, companyExperiences: any[]) => (
+    <div key={company} className="border border-gray-200 rounded-lg p-6 bg-white">
+      {/* Company Header */}
+      <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-lg font-semibold text-gray-600">
+              {company.charAt(0).toUpperCase()}
+            </span>
           </div>
-
-          {/* Company Experiences */}
-          <div className="space-y-4">
-            {companyExperiences
-              .sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
-              .map((exp: any) => (
-                <div key={exp.id} className="border-l-4 border-gray-300 pl-4 py-2 relative">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900 text-lg">{exp.title}</h4>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                        <span>
-                          {exp.start_date && new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                          {' - '}
-                          {exp.is_current ? 'Present' : exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}
-                        </span>
-                        <span>•</span>
-                        <span>{exp.location || 'Remote'}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Edit and Delete buttons */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onEdit(exp, exp.id)}
-                        className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Edit experience"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={() => onDelete(exp.id)}
-                        className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Delete experience"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {exp.description && (
-                    <p className="text-gray-700 mb-3 leading-relaxed">{exp.description}</p>
-                  )}
-                </div>
-              ))}
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900">{company}</h3>
           </div>
         </div>
-      ))}
+      </div>
+
+      {/* Company Experiences */}
+      <SectionWithShowMore
+        items={companyExperiences.sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())}
+        renderItem={(exp: any) => (
+          <div key={exp.id} className="border-l-4 border-gray-300 pl-4 py-2 relative">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h4 className="font-semibold text-gray-900 text-lg">{exp.title}</h4>
+                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                  <span>
+                    {exp.start_date && new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    {' - '}
+                    {exp.is_current ? 'Present' : exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}
+                  </span>
+                  <span>•</span>
+                  <span>{exp.location || 'Remote'}</span>
+                </div>
+              </div>
+              
+              {/* Edit and Delete buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onEdit(exp, exp.id)}
+                  className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  title="Edit experience"
+                >
+                  <Edit size={14} />
+                </button>
+                <button
+                  onClick={() => onDelete(exp.id)}
+                  className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                  title="Delete experience"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+            
+            {exp.description && (
+              <p className="text-gray-700 mb-3 leading-relaxed">{exp.description}</p>
+            )}
+          </div>
+        )}
+      />
     </div>
+  );
+
+  return (
+    <SectionWithShowMore
+      items={Object.entries(experiencesByCompany)}
+      renderItem={([company, companyExperiences]: [string, any]) => 
+        renderCompanyExperiences(company, companyExperiences)
+      }
+    />
   );
 };
 
 // Education Section Component
 const EducationSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-6">
-    {data.educations.map((edu: any) => (
+  <SectionWithShowMore
+    items={data.educations}
+    renderItem={(edu: any) => (
       <div key={edu.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
@@ -444,50 +471,84 @@ const EducationSection: React.FC<{ data: any; onEdit: (data: Record<string, unkn
           <p className="text-gray-600 text-sm">Activities: {edu.activities_societies}</p>
         )}
       </div>
-    ))}
-  </div>
+    )}
+  />
 );
 
 // Skills Section Component
-const SkillsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-4">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {data.skills.map((skill: any) => (
-        <div key={skill.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors relative">
-          <div className="font-medium text-gray-900 mb-2">{skill.name}</div>
-          {skill.category && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium"></span> {skill.category}
+const SkillsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => {
+  const [showAll, setShowAll] = useState(false);
+  const maxItems = 6;
+  const hasMoreItems = data.skills.length > maxItems;
+  const displayedSkills = showAll ? data.skills : data.skills.slice(0, maxItems);
+
+  if (data.skills.length === 0) {
+    return <div className="text-gray-500 text-center py-4">No skills to display</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {displayedSkills.map((skill: any) => (
+          <div key={skill.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors relative">
+            <div className="font-medium text-gray-900 mb-2">{skill.name}</div>
+            {skill.category && (
+              <div className="text-sm text-gray-600 mb-1">
+                <span className="font-medium"></span> {skill.category}
+              </div>
+            )}
+            
+            {/* Edit and Delete buttons */}
+            <div className="absolute top-2 right-2 flex items-center gap-1">
+              <button
+                onClick={() => onEdit(skill, skill.id)}
+                className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                title="Edit skill"
+              >
+                <Edit size={12} />
+              </button>
+              <button
+                onClick={() => onDelete(skill.id)}
+                className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                title="Delete skill"
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
-          )}
-          
-          {/* Edit and Delete buttons */}
-          <div className="absolute top-2 right-2 flex items-center gap-1">
-            <button
-              onClick={() => onEdit(skill, skill.id)}
-              className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-              title="Edit skill"
-            >
-              <Edit size={12} />
-            </button>
-            <button
-              onClick={() => onDelete(skill.id)}
-              className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-              title="Delete skill"
-            >
-              <Trash2 size={12} />
-            </button>
           </div>
+        ))}
+      </div>
+      
+      {hasMoreItems && (
+        <div className="flex justify-center pt-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowAll(!showAll)}
+            className="flex items-center gap-2"
+          >
+            {showAll ? (
+              <>
+                <ChevronUp size={16} />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                Show More ({data.skills.length - maxItems} more)
+              </>
+            )}
+          </Button>
         </div>
-      ))}
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 // Projects Section Component
 const ProjectsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-6">
-    {data.projects.map((project: any) => (
+  <SectionWithShowMore
+    items={data.projects}
+    renderItem={(project: any) => (
       <div key={project.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-3">
           <div>
@@ -552,14 +613,15 @@ const ProjectsSection: React.FC<{ data: any; onEdit: (data: Record<string, unkno
           </a>
         )}
       </div>
-    ))}
-  </div>
+    )}
+  />
 );
 
 // Certificates Section Component
 const CertificatesSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-4">
-    {data.certificates.map((cert: any) => (
+  <SectionWithShowMore
+    items={data.certificates}
+    renderItem={(cert: any) => (
       <div key={cert.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
@@ -608,14 +670,15 @@ const CertificatesSection: React.FC<{ data: any; onEdit: (data: Record<string, u
           </a>
         )}
       </div>
-    ))}
-  </div>
+    )}
+  />
 );
 
 // Languages Section Component
 const LanguagesSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-4">
-    {data.languages.map((lang: any) => (
+  <SectionWithShowMore
+    items={data.languages}
+    renderItem={(lang: any) => (
       <div key={lang.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg relative">
         <div>
           <span className="font-medium text-gray-900">{lang.language}</span>
@@ -625,7 +688,7 @@ const LanguagesSection: React.FC<{ data: any; onEdit: (data: Record<string, unkn
             </span>
           )}
         </div>
-        <div className="text-right">
+        {/* <div className="text-right">
           {lang.oral_proficiency && (
             <div className="text-sm text-gray-600">
               Oral: {lang.oral_proficiency.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -636,7 +699,7 @@ const LanguagesSection: React.FC<{ data: any; onEdit: (data: Record<string, unkn
               Written: {lang.written_proficiency.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
             </div>
           )}
-        </div>
+        </div> */}
         
         {/* Edit and Delete buttons */}
         <div className="absolute top-2 right-2 flex items-center gap-1">
@@ -656,14 +719,15 @@ const LanguagesSection: React.FC<{ data: any; onEdit: (data: Record<string, unkn
           </button>
         </div>
       </div>
-    ))}
-  </div>
+    )}
+  />
 );
 
 // Awards Section Component
 const AwardsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-4">
-    {data.awards.map((award: any) => (
+  <SectionWithShowMore
+    items={data.awards}
+    renderItem={(award: any) => (
       <div key={award.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
@@ -704,14 +768,15 @@ const AwardsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown
           <p className="text-gray-700">{award.description}</p>
         )}
       </div>
-    ))}
-  </div>
+    )}
+  />
 );
 
 // Volunteering Section Component
 const VolunteeringSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-4">
-    {data.volunteering.map((vol: any) => (
+  <SectionWithShowMore
+    items={data.volunteering}
+    renderItem={(vol: any) => (
       <div key={vol.id} className="border border-gray-200 rounded-lg p-4 relative">
         <div className="flex justify-between items-start mb-2">
           <div>
@@ -752,14 +817,15 @@ const VolunteeringSection: React.FC<{ data: any; onEdit: (data: Record<string, u
           <p className="text-gray-700">{vol.description}</p>
         )}
       </div>
-    ))}
-  </div>
+    )}
+  />
 );
 
 // Accomplishments Section Component
 const AccomplishmentsSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void; onDelete: (id: string) => void }> = ({ data, onEdit, onDelete }) => (
-  <div className="space-y-4">
-    {data.accomplishments.map((acc: any) => (
+  <SectionWithShowMore
+    items={data.accomplishments}
+    renderItem={(acc: any) => (
       <div key={acc.id} className="border-l-4 border-gray-500 pl-4 py-2 relative">
         <h4 className="font-medium text-gray-900 mb-1">{acc.title}</h4>
         {acc.description && (
@@ -789,6 +855,6 @@ const AccomplishmentsSection: React.FC<{ data: any; onEdit: (data: Record<string
           </button>
         </div>
       </div>
-    ))}
-  </div>
+    )}
+  />
 );

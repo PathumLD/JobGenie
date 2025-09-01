@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserType } from '@/types/user';
 import { useRouter } from 'next/navigation';
+import { OAuthSessionHandler } from '@/components/candidate';
 
 export default function Home() {
   const router = useRouter()
@@ -16,6 +17,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100">
+      <OAuthSessionHandler />
       {/* Header */}
       <Header />
 
@@ -61,7 +63,7 @@ export default function Home() {
                     }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
-                    Let&apos;s Get Started
+                    Signup as Candidate
                   </Button>
                 </CardContent>
               </Card>
@@ -107,7 +109,7 @@ export default function Home() {
                     onClick={() => handleUserTypeSelection('employer')}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
-                    Let&apos;s Get Started
+                    Signup as Employer
                   </Button>
                 </CardContent>
               </Card>

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Plus, Minus } from 'lucide-react';
 import { authenticatedFetch } from '@/lib/auth-storage';
+import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
 
 interface MergeResults {
   basic_info_updated: boolean;
@@ -57,6 +58,14 @@ interface MergeResponse {
 }
 
 export default function UploadCVPage() {
+  return (
+    <CandidateAuthGuard>
+      <UploadCVContent />
+    </CandidateAuthGuard>
+  );
+}
+
+function UploadCVContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);

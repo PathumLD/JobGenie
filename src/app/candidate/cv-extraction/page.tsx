@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { authenticatedFetch, debugAuthStatus, refreshTokenFromStorage } from '@/lib/auth-storage';
+import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
 
 import { toast } from 'sonner';
 
@@ -203,6 +204,14 @@ interface ExtractionSummary {
 }
 
 export default function CVExtractionPage() {
+  return (
+    <CandidateAuthGuard>
+      <CVExtractionContent />
+    </CandidateAuthGuard>
+  );
+}
+
+function CVExtractionContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 export default function CandidateJobsPage() {
   const [shouldHandleOAuth, setShouldHandleOAuth] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -20,10 +21,10 @@ export default function CandidateJobsPage() {
         const hasOAuthSuccess = oauthSuccess === 'true' && tempToken;
         setShouldHandleOAuth(!!hasOAuthSuccess);
 
-        // Check profile completion
+        // Check profile completion and approval status
         const token = localStorage.getItem('access_token');
         if (token) {
-          const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+          const profileCheckResponse = await fetch('/api/candidate/profile/profile-approval-check', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -34,6 +35,7 @@ export default function CandidateJobsPage() {
             const profileData = await profileCheckResponse.json();
             if (profileData.success) {
               setIsProfileComplete(profileData.isProfileComplete);
+              setApprovalStatus(profileData.approval_status);
               
               // If profile is incomplete, redirect to complete profile page
               if (!profileData.isProfileComplete) {
@@ -41,14 +43,20 @@ export default function CandidateJobsPage() {
                 window.location.href = '/candidate/complete-profile';
                 return;
               }
+              
+              // If profile is complete but not approved, show approval pending message
+              if (profileData.isProfileComplete && profileData.approval_status === 'pending') {
+                console.log('Profile complete but pending MIS approval');
+                // Don't redirect, just show the message on the page
+              }
             } else {
-              console.error('Profile completion check failed:', profileData.message);
+              console.error('Profile approval check failed:', profileData.message);
               // If check fails, assume profile is incomplete and redirect
               window.location.href = '/candidate/complete-profile';
               return;
             }
           } else {
-            console.error('Profile completion check request failed');
+            console.error('Profile approval check request failed');
             // If request fails, assume profile is incomplete and redirect
             window.location.href = '/candidate/complete-profile';
             return;
@@ -112,6 +120,28 @@ export default function CandidateJobsPage() {
           Advanced Filters
         </Button>
       </div>
+
+      {/* Approval Status Warning */}
+      {isProfileComplete && approvalStatus === 'pending' && (
+        <Card className="bg-yellow-50 border-yellow-200 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-yellow-800">Profile Pending Approval</h3>
+                <p className="text-yellow-700 mt-1">
+                  Your profile is complete but pending MIS approval. You can view jobs and update your profile, 
+                  but you cannot apply for jobs until your profile is approved. Please wait for approval or contact support if you have questions.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search Bar */}
       <Card className="bg-white border-0 shadow-sm">
@@ -228,8 +258,24 @@ export default function CandidateJobsPage() {
                       </div>
                     </div>
                     <div className="ml-6 flex flex-col space-y-2">
-                      <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                        Apply Now
+                      <Button 
+                        variant="outline" 
+                        className={`${
+                          approvalStatus === 'approved' 
+                            ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50' 
+                            : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                        }`}
+                        disabled={approvalStatus !== 'approved'}
+                        onClick={() => {
+                          if (approvalStatus !== 'approved') {
+                            alert('Your profile must be approved by MIS before you can apply for jobs.');
+                          } else {
+                            // Navigate to job detail page for approved candidates
+                            window.location.href = `/candidate/jobs/${index + 1}`; // Using index for demo, should use actual job ID
+                          }
+                        }}
+                      >
+                        {approvalStatus === 'approved' ? 'View & Apply' : 'Approval Required'}
                       </Button>
                       <Button variant="ghost" size="sm">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

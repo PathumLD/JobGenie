@@ -67,7 +67,56 @@ export async function GET(
     // Fetch candidate with all related data
     const candidate = await prisma.candidate.findUnique({
       where: { user_id: candidateId },
-      include: {
+      select: {
+        first_name: true,
+        last_name: true,
+        gender: true,
+        date_of_birth: true,
+        title: true,
+        current_position: true,
+        industry: true,
+        bio: true,
+        about: true,
+        country: true,
+        city: true,
+        location: true,
+        address: true,
+        phone1: true,
+        phone2: true,
+        personal_website: true,
+        nic: true,
+        passport: true,
+        membership_no: true,
+        remote_preference: true,
+        experience_level: true,
+        years_of_experience: true,
+        expected_salary_min: true,
+        expected_salary_max: true,
+        currency: true,
+        profile_image_url: true,
+        availability_status: true,
+        availability_date: true,
+        resume_url: true,
+        github_url: true,
+        linkedin_url: true,
+        professional_summary: true,
+        total_years_experience: true,
+        open_to_relocation: true,
+        willing_to_travel: true,
+        security_clearance: true,
+        disability_status: true,
+        veteran_status: true,
+        pronouns: true,
+        salary_visibility: true,
+        notice_period: true,
+        work_authorization: true,
+        visa_assistance_needed: true,
+        work_availability: true,
+        interview_ready: true,
+        pre_qualified: true,
+        profile_completion_percentage: true,
+        completedProfile: true,
+        approval_status: true,
         user: {
           select: {
             first_name: true,
@@ -220,7 +269,7 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         pre_qualified: candidate.pre_qualified,
         profile_completion_percentage: candidate.profile_completion_percentage,
         completedProfile: candidate.completedProfile,
-        isApproved: candidate.isApproved
+        approval_status: candidate.approval_status
       }
     });
 
@@ -475,7 +524,7 @@ function calculateProfileSummary(candidate: Record<string, unknown>) {
   const totalCertificates = (candidate.certificates as unknown[])?.length || 0;
   const totalSkills = (candidate.skills as unknown[])?.length || 0;
   const profileCompletionPercentage = (candidate.profile_completion_percentage as number) || 0;
-  const isApproved = (candidate.isApproved as boolean) || false;
+  const approvalStatus = (candidate.approval_status as 'pending' | 'approved' | 'rejected') || 'pending';
 
   return {
     total_experience_years: totalExperienceYears,
@@ -483,6 +532,6 @@ function calculateProfileSummary(candidate: Record<string, unknown>) {
     total_certificates: totalCertificates,
     total_skills: totalSkills,
     profile_completion_percentage: profileCompletionPercentage,
-    is_approved: isApproved
+    approval_status: approvalStatus
   };
 }

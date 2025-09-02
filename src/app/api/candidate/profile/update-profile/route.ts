@@ -345,6 +345,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // 4. Check if candidate exists, create if not
+    // Note: Profile updates are allowed regardless of MIS approval status
     let existingCandidate = await prisma.candidate.findUnique({
       where: { user_id: payload.userId },
       include: {

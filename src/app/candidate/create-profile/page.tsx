@@ -9,6 +9,7 @@ import { FormInput } from '@/components/ui/form-input';
 import { FormSelect } from '@/components/ui/form-select';
 import { toast } from 'sonner';
 import { authenticatedFetch } from '@/lib/auth-storage';
+import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
 
 // Types
 interface BasicInfo {
@@ -168,6 +169,14 @@ const sections = [
 ];
 
 export default function CreateProfilePage() {
+  return (
+    <CandidateAuthGuard>
+      <CreateProfileContent />
+    </CandidateAuthGuard>
+  );
+}
+
+function CreateProfileContent() {
   const [activeSection, setActiveSection] = useState('basic_info');
   const [isSubmitting, setIsSubmitting] = useState(false);
      const [cvData, setCvData] = useState<{

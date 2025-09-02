@@ -283,7 +283,7 @@ export interface ProfileResponse {
     visa_assistance_needed?: boolean | null;
     work_availability?: 'full_time' | 'part_time' | 'contract' | 'freelance' | 'internship' | 'volunteer' | null;
     interview_ready?: boolean | null;
-    isApproved?: boolean | null;
+    approval_status?: 'pending' | 'approved' | 'rejected' | null;
     pre_qualified?: boolean | null;
     profile_completion_percentage?: number | null;
     completedProfile?: boolean | null;

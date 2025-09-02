@@ -85,7 +85,7 @@ export async function GET(
         {
           success: false,
           error: 'NOT_FOUND',
-          message: 'Candidate profile not found',
+          message: 'Candidate profile not found'
         } as ProfileApprovalErrorResponse,
         { status: 404 }
       );
@@ -115,7 +115,7 @@ export async function GET(
     const isProfileComplete = missingFields.length === 0;
     const approval_status = candidate.approval_status || 'pending';
 
-    console.log('🔍 Profile completion check for user:', userId);
+    console.log('🔍 Profile approval check for user:', userId);
     console.log('📊 Required fields check:', requiredFields.map(f => ({ field: f.field, value: f.value, label: f.label })));
     console.log('❌ Missing fields:', missingFields);
     console.log('✅ Approval status:', approval_status);
@@ -154,13 +154,13 @@ export async function GET(
     } as ProfileApprovalResponse);
 
   } catch (error) {
-    console.error('Error checking profile completion:', error);
+    console.error('Error checking profile approval:', error);
     
     return NextResponse.json(
       {
         success: false,
         error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to check profile completion'
+        message: 'Failed to check profile approval'
       } as ProfileApprovalErrorResponse,
       { status: 500 }
     );

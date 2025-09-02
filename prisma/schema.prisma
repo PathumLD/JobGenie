@@ -97,7 +97,7 @@ model Candidate {
   saved_jobs_metadata           Json?                 @default("{}")
   created_at                    DateTime?             @default(now())
   updated_at                    DateTime?             @updatedAt
-  isApproved                    Boolean               @default(false)
+  approval_status               ApprovalStatus        @default(pending)
   accomplishments               Accomplishment[]
   applications                  Application[]
   application_snapshots         ApplicationSnapshot[]
@@ -1014,4 +1014,10 @@ enum RemoteWorkPreference {
   onsite
   flexible
   none
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
 }

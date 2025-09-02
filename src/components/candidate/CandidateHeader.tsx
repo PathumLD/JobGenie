@@ -129,7 +129,7 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <Card className="absolute right-0 mt-2 w-80 shadow-xl border-0">
+              <Card className="absolute z-50 bg-white right-0 mt-2 w-80 shadow-xl border-0">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900">Notifications</h3>
@@ -189,9 +189,9 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
               </svg>
             </button>
 
-            {/* Profile Dropdown */}
+            {/* Profile Dropdown */}  
             {showProfileDropdown && (
-              <Card className="absolute right-0 mt-2 w-48 shadow-xl border-0">
+              <Card className="absolute z-50 bg-white right-0 mt-2 w-48 shadow-xl border-0">
                 <CardContent className="p-2">
                   <div className="space-y-1">
                     <Link

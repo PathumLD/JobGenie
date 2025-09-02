@@ -1,113 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { createClient } from '@supabase/supabase-js';
 import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
+import { ResumeStorage } from '@/lib/resume-storage';
+import {
+  JWTPayload,
+  ResumeUploadData,
+  ResumeUploadResponse,
+  ResumeListResponse,
+  ResumeUpdateResponse,
+  ResumeDeleteResponse,
+  ResumeUpdateData,
+  ResumeDeleteData,
+  FileUploadResult,
+  ErrorResponse,
+  Resume
+} from '@/types/resume-management';
 
 const prisma = new PrismaClient();
 
 // Force Node.js runtime for this API route
 export const runtime = 'nodejs';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// File validation configuration
+const RESUME_FILE_CONFIG = {
+  maxSize: 10 * 1024 * 1024, // 10MB
+  allowedTypes: [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ],
+  allowedExtensions: ['.pdf', '.doc', '.docx']
+};
 
-// Types based on schema.prisma - following exact structure
-interface JWTPayload {
-  userId: string;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  membership_no?: string;
-  role: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
-  userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
-  exp?: number;
-  iat?: number;
+// Helper function to validate file
+function validateResumeFile(file: File): { isValid: boolean; error?: string } {
+  // Check file size
+  if (file.size > RESUME_FILE_CONFIG.maxSize) {
+    return {
+      isValid: false,
+      error: 'Resume file size must be less than 10MB'
+    };
+  }
+
+  // Check file type
+  if (!RESUME_FILE_CONFIG.allowedTypes.includes(file.type)) {
+    return {
+      isValid: false,
+      error: 'Only PDF, DOC, and DOCX files are allowed for resumes'
+    };
+  }
+
+  return { isValid: true };
 }
-
-interface ResumeUploadData {
-  is_allow_fetch?: boolean;
-  is_primary?: boolean;
-  original_filename?: string;
-  file_size?: number;
-  file_type?: string;
-}
-
-// Enhanced duplicate detection function with stricter matching
-type WorkExperienceData = {
-  title: string;
-  company: string;
-  employment_type: 'full_time' | 'part_time' | 'contract' | 'internship' | 'freelance' | 'volunteer';
-};
-
-type EducationData = {
-  degree_diploma: string;
-  university_school: string;
-};
-
-type CertificateData = {
-  name: string;
-  issuing_authority: string;
-};
-
-type ProjectData = {
-  name: string;
-};
-
-type AwardData = {
-  title: string;
-  offered_by: string;
-};
-
-type VolunteeringData = {
-  role: string;
-  institution: string;
-};
-
-type LanguageData = {
-  language: string;
-};
-
-type SkillData = {
-  name: string;
-};
 
 // Helper function to upload resume to Supabase storage
-async function uploadResume(file: File, candidateId: string): Promise<{ filePath: string; publicUrl: string }> {
-  const fileName = `${Date.now()}_${file.name}`;
-  const filePath = `candidate_resume/${candidateId}/${fileName}`;
-  
-  const { data, error } = await supabase.storage
-    .from('candidate_resume')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
-  
-  if (error) {
-    throw new Error(`Failed to upload resume: ${error.message}`);
-  }
-  
-  // Get public URL
-  const { data: urlData } = supabase.storage
-    .from('candidate_resume')
-    .getPublicUrl(filePath);
-  
-  return {
-    filePath,
-    publicUrl: urlData.publicUrl
-  };
+async function uploadResume(file: File, candidateId: string): Promise<FileUploadResult> {
+  return ResumeStorage.uploadResume(file, candidateId);
 }
 
 // Helper function to set other resumes as non-primary
-async function setOtherResumesNonPrimary(candidateId: string, excludeResumeId?: string) {
+async function setOtherResumesNonPrimary(candidateId: string, excludeResumeId?: string): Promise<void> {
   await prisma.resume.updateMany({
     where: {
       candidate_id: candidateId,
-      id: {
-        not: excludeResumeId
-      }
+      id: excludeResumeId ? { not: excludeResumeId } : undefined
     },
     data: {
       is_primary: false,
@@ -116,11 +72,22 @@ async function setOtherResumesNonPrimary(candidateId: string, excludeResumeId?: 
   });
 }
 
-export async function POST(request: NextRequest) {
+// Helper function to update candidate resume URL
+async function updateCandidateResumeUrl(candidateId: string, resumeUrl: string | null): Promise<void> {
+  await prisma.candidate.update({
+    where: { user_id: candidateId },
+    data: {
+      resume_url: resumeUrl,
+      updated_at: new Date(),
+    }
+  });
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse<ResumeUploadResponse | ErrorResponse>> {
   try {
     console.log('🔄 Resume Upload API called');
 
-    // 1. Authenticate user - get token from Authorization header
+    // 1. Authenticate user
     const token = getTokenFromHeaders(request);
     
     if (!token) {
@@ -154,7 +121,7 @@ export async function POST(request: NextRequest) {
     // 2. Parse form data
     const formData = await request.formData();
     const resumeFile = formData.get('resumeFile') as File | null;
-    const resumeData = formData.get('resumeData') as string | null;
+    const resumeDataString = formData.get('resumeData') as string | null;
 
     if (!resumeFile) {
       return NextResponse.json(
@@ -164,30 +131,19 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Validate resume file
-    if (!resumeFile.type.startsWith('application/') && 
-        !resumeFile.type.includes('pdf') && 
-        !resumeFile.type.includes('doc') && 
-        !resumeFile.type.includes('docx')) {
+    const validation = validateResumeFile(resumeFile);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'Only PDF, DOC, and DOCX files are allowed for resumes' },
-        { status: 400 }
-      );
-    }
-
-    // Check file size (10MB limit for resumes)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (resumeFile.size > maxSize) {
-      return NextResponse.json(
-        { error: 'Resume file size must be less than 10MB' },
+        { error: validation.error || 'Invalid file' },
         { status: 400 }
       );
     }
 
     // 4. Parse resume data if provided
     let uploadData: ResumeUploadData = {};
-    if (resumeData) {
+    if (resumeDataString) {
       try {
-        uploadData = JSON.parse(resumeData);
+        uploadData = JSON.parse(resumeDataString) as ResumeUploadData;
         console.log('✅ Resume data parsed successfully');
       } catch (parseError) {
         console.error('❌ Failed to parse resume data:', parseError);
@@ -216,7 +172,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Upload resume to Supabase storage
-    let uploadResult: { filePath: string; publicUrl: string };
+    let uploadResult: FileUploadResult;
     try {
       console.log('📄 Uploading resume:', resumeFile.name, 'Size:', resumeFile.size);
       uploadResult = await uploadResume(resumeFile, payload.userId);
@@ -258,18 +214,12 @@ export async function POST(request: NextRequest) {
 
     // 9. Update candidate table with resume URL if this is primary
     if (uploadData.is_primary) {
-      await prisma.candidate.update({
-        where: { user_id: payload.userId },
-        data: {
-          resume_url: uploadResult.publicUrl,
-          updated_at: new Date(),
-        }
-      });
+      await updateCandidateResumeUrl(payload.userId, uploadResult.publicUrl);
       console.log('✅ Candidate resume_url updated');
     }
 
     // 10. Return success response
-    return NextResponse.json({
+    const response: ResumeUploadResponse = {
       success: true,
       message: 'Resume uploaded successfully',
       data: {
@@ -285,7 +235,9 @@ export async function POST(request: NextRequest) {
         storage_path: uploadResult.filePath,
         public_url: uploadResult.publicUrl,
       }
-    });
+    };
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('❌ Resume upload error:', error);
@@ -298,11 +250,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse<ResumeListResponse | ErrorResponse>> {
   try {
     console.log('🔄 Get Candidate Resumes API called');
 
-    // 1. Authenticate user - get token from Authorization header
+    // 1. Authenticate user
     const token = getTokenFromHeaders(request);
     
     if (!token) {
@@ -342,15 +294,17 @@ export async function GET(request: NextRequest) {
       ]
     });
 
-    return NextResponse.json({
+    const response: ResumeListResponse = {
       success: true,
       data: {
         candidate_id: payload.userId,
         resumes: resumes,
         total_count: resumes.length,
-        primary_resume: resumes.find((r: typeof resumes[number]) => r.is_primary) || null
+        primary_resume: resumes.find((r: Resume) => r.is_primary) || null
       }
-    });
+    };
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('❌ Resume retrieval error:', error);
@@ -363,11 +317,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function PUT(request: NextRequest): Promise<NextResponse<ResumeUpdateResponse | ErrorResponse>> {
   try {
     console.log('🔄 Resume Update API called');
 
-    // 1. Authenticate user - get token from Authorization header
+    // 1. Authenticate user
     const token = getTokenFromHeaders(request);
     
     if (!token) {
@@ -399,7 +353,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // 2. Parse request body
-    const body = await request.json();
+    const body = await request.json() as ResumeUpdateData;
     const { resume_id, is_primary, is_allow_fetch } = body;
 
     if (!resume_id) {
@@ -442,23 +396,19 @@ export async function PUT(request: NextRequest) {
 
     // 6. Update candidate table with resume URL if this is primary
     if (is_primary) {
-      await prisma.candidate.update({
-        where: { user_id: payload.userId },
-        data: {
-          resume_url: updatedResume.resume_url,
-          updated_at: new Date(),
-        }
-      });
+      await updateCandidateResumeUrl(payload.userId, updatedResume.resume_url);
       console.log('✅ Candidate resume_url updated');
     }
 
     console.log('✅ Resume updated:', updatedResume.id);
 
-    return NextResponse.json({
+    const response: ResumeUpdateResponse = {
       success: true,
       message: 'Resume updated successfully',
       data: updatedResume
-    });
+    };
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('❌ Resume update error:', error);
@@ -471,11 +421,11 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(request: NextRequest): Promise<NextResponse<ResumeDeleteResponse | ErrorResponse>> {
   try {
     console.log('🔄 Resume Delete API called');
 
-    // 1. Authenticate user - get token from Authorization header
+    // 1. Authenticate user
     const token = getTokenFromHeaders(request);
     
     if (!token) {
@@ -507,7 +457,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 2. Parse request body
-    const body = await request.json();
+    const body = await request.json() as ResumeDeleteData;
     const { resume_id } = body;
 
     if (!resume_id) {
@@ -536,16 +486,9 @@ export async function DELETE(request: NextRequest) {
     try {
       const fileName = existingResume.resume_url?.split('/').pop();
       if (fileName) {
-        const filePath = `candidate_resume/${payload.userId}/${fileName}`;
-        const { error } = await supabase.storage
-          .from('candidate_resume')
-          .remove([filePath]);
-        
-        if (error) {
-          console.warn('⚠️ Failed to delete file from storage:', error.message);
-        } else {
-          console.log('✅ File deleted from storage');
-        }
+        const filePath = `${payload.userId}/${fileName}`;
+        await ResumeStorage.deleteResume(filePath);
+        console.log('✅ File deleted from storage');
       }
     } catch (storageError) {
       console.warn('⚠️ Storage deletion error:', storageError);
@@ -578,37 +521,27 @@ export async function DELETE(request: NextRequest) {
         });
 
         // Update candidate table
-        await prisma.candidate.update({
-          where: { user_id: payload.userId },
-          data: {
-            resume_url: nextPrimaryResume.resume_url,
-            updated_at: new Date()
-          }
-        });
+        await updateCandidateResumeUrl(payload.userId, nextPrimaryResume.resume_url);
         console.log('✅ New primary resume set:', nextPrimaryResume.id);
       } else {
         // No more resumes, clear candidate resume_url
-        await prisma.candidate.update({
-          where: { user_id: payload.userId },
-          data: {
-            resume_url: null,
-            updated_at: new Date()
-          }
-        });
+        await updateCandidateResumeUrl(payload.userId, null);
         console.log('✅ Candidate resume_url cleared');
       }
     }
 
     console.log('✅ Resume deleted:', resume_id);
 
-    return NextResponse.json({
+    const response: ResumeDeleteResponse = {
       success: true,
       message: 'Resume deleted successfully',
       data: {
         deleted_resume_id: resume_id,
         candidate_id: payload.userId
       }
-    });
+    };
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('❌ Resume deletion error:', error);

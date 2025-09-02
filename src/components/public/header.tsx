@@ -40,14 +40,12 @@ export const Header = ({ showSkipLink = false }: HeaderProps) => {
                             <a href="#about" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">About</a>
                             <a href="#features" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">Features</a>
                             <a href="#contact" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">Contact</a>
-                            {/* {showSkipLink && (
-                                <Link 
-                                    href="/candidate/jobs" 
-                                    className="text-emerald-600 border-emerald-600 border-2 px-4 py-2 rounded-md hover:text-emerald-800 transition-colors text-sm lg:text-base font-medium"
-                                >
-                                     Skip to Job View
-                                </Link>
-                            )} */}
+                            <Link 
+                                href="/mis/login"
+                                className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base font-medium"
+                            >
+                                MIS Login
+                            </Link>
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -105,25 +103,23 @@ export const Header = ({ showSkipLink = false }: HeaderProps) => {
                                     >
                                         Contact
                                     </a>
-                                    {/* {showSkipLink && (
-                                        <Link 
-                                            href="/candidate/jobs" 
-                                            className="block text-2xl border  font-semibold text-emerald-600 hover:text-emerald-700 transition-colors py-3 border-b border-emerald-100"
-                                            onClick={closeMobileMenu}
-                                        >
-                                            Skip to Job View
-                                        </Link>
-                                    )} */}
                                 </div>
                             </nav>
                             
                             {/* Bottom section */}
                             <div className="p-6 border-t border-emerald-200">
-                                <div className="text-center">
+                                <div className="text-center space-y-4">
                                     <p className="text-emerald-600 text-sm mb-4">Ready to get started?</p>
                                     <button className="w-full bg-emerald-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-emerald-700 transition-colors">
                                         Upload Resume
                                     </button>
+                                    <Link 
+                                        href="/mis/login"
+                                        onClick={closeMobileMenu}
+                                        className="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                    >
+                                        MIS Login
+                                    </Link>
                                 </div>
                             </div>
                         </div>

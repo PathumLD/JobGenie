@@ -205,7 +205,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse<ProfileRes
         created_at: updatedUser.created_at,
         updated_at: updatedUser.updated_at,
         is_created: updatedUser.is_created
-      }
+      },
+      user_type: updatedUser.role as 'candidate' | 'employer' | 'mis' | 'recruitment_agency'
     });
 
   } catch (error) {

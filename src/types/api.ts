@@ -413,3 +413,86 @@ export interface EmployerRegistrationResponse {
     updated_at: Date;
   };
 }
+
+// MIS Login Request
+export interface MisLoginRequest {
+  email: string;
+  password: string;
+}
+
+// MIS Login Response
+export interface MisLoginResponse {
+  message: string;
+  user: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    address?: string | null;
+    phone1?: string | null;
+    phone2?: string | null;
+    email: string;
+    role?: 'candidate' | 'employer' | 'mis' | 'recruitment_agency' | null;
+    status?: 'active' | 'inactive' | 'suspended' | 'pending_verification' | null;
+    email_verified?: boolean | null;
+    last_login_at?: Date | null;
+    created_at?: Date | null;
+    updated_at?: Date | null;
+    is_created: boolean;
+  };
+  mis_user: {
+    user_id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    email: string;
+    created_at: Date;
+    updated_at: Date;
+  };
+  user_type: 'mis';
+  access_token: string;
+}
+
+// MIS Registration Request
+export interface MisRegistrationRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  confirm_password: string;
+}
+
+// MIS Registration Response
+export interface MisRegistrationResponse {
+  message: string;
+  user: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    address?: string | null;
+    phone1?: string | null;
+    phone2?: string | null;
+    email: string;
+    role?: 'candidate' | 'employer' | 'mis' | 'recruitment_agency' | null;
+    status?: 'active' | 'inactive' | 'suspended' | 'pending_verification' | null;
+    email_verified?: boolean | null;
+    email_verification_token?: string | null;
+    email_verification_token_expires_at?: Date | null;
+    password_reset_token?: string | null;
+    password_reset_expires_at?: Date | null;
+    provider?: string | null;
+    provider_id?: string | null;
+    last_login_at?: Date | null;
+    created_at?: Date | null;
+    updated_at?: Date | null;
+    deleted_at?: Date | null;
+    is_created: boolean;
+  };
+  mis_user: {
+    user_id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    email: string;
+    created_at: Date;
+    updated_at: Date;
+  };
+}
+

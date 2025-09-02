@@ -8,3 +8,6 @@ export * from './user';
 
 // Candidate Profile Types
 export * from './candidate-profile';
+
+// MIS Types
+export * from './mis';

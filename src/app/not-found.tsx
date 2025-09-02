@@ -7,26 +7,16 @@ export default function NotFound() {
   const router = useRouter();
 
   const handleGoBack = () => {
-    // Check if there's a previous page in browser history
+    // Try to go back to the previous page first
     if (window.history.length > 1) {
       try {
-        // Check if the previous page is not the same as current (to avoid infinite loops)
-        const currentPath = window.location.pathname;
-        const referrer = document.referrer;
-        
-        if (referrer && !referrer.includes(currentPath)) {
-          router.back();
-        } else {
-          // If referrer is same page or invalid, go to home
-          router.push('/');
-        }
+        router.back();
       } catch (error) {
-        // If router.back() fails, try to go to home
         console.log('Failed to go back, redirecting to home');
         router.push('/');
       }
     } else {
-      // If no previous page, go to home
+      // If no previous page in history, go to home
       router.push('/');
     }
   };

@@ -22,10 +22,6 @@ interface BasicInfo {
   about: string | null;
   country: string | null;
   city: string | null;
-  address: string | null;
-  date_of_birth: string | null;
-  gender: string | null;
-  nic: string | null;
   passport: string | null;
   open_to_relocation: boolean | null;
   willing_to_travel: boolean | null;
@@ -643,16 +639,6 @@ function CreateProfileContent() {
            defaultValue={cvData?.extracted_data?.basic_info?.country || ''}
          />
          <FormInput
-           label="City"
-           {...methods.register('basic_info.city')}
-           defaultValue={cvData?.extracted_data?.basic_info?.city || ''}
-         />
-         <FormInput
-           label="Address"
-           {...methods.register('basic_info.address')}
-           defaultValue={cvData?.extracted_data?.basic_info?.address || ''}
-         />
-         <FormInput
            label="Years of Experience"
            type="number"
            {...methods.register('basic_info.years_of_experience', { valueAsNumber: true })}
@@ -673,51 +659,8 @@ function CreateProfileContent() {
          />
        </div>
 
-       {/* Additional Personal Information */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-         <FormInput
-           label="Date of Birth"
-           type="date"
-           {...methods.register('basic_info.date_of_birth')}
-           defaultValue={cvData?.extracted_data?.basic_info?.date_of_birth || ''}
-         />
-         <FormSelect
-           label="Gender"
-           {...methods.register('basic_info.gender')}
-           defaultValue={cvData?.extracted_data?.basic_info?.gender || ''}
-           options={[
-             { value: '', label: 'Select Gender' },
-             { value: 'male', label: 'Male' },
-             { value: 'female', label: 'Female' },
-             { value: 'other', label: 'Other' },
-             { value: 'prefer_not_to_say', label: 'Prefer not to say' }
-           ]}
-         />
-         <FormInput
-           label="NIC Number"
-           {...methods.register('basic_info.nic')}
-           defaultValue={cvData?.extracted_data?.basic_info?.nic || ''}
-         />
-         <FormInput
-           label="Passport Number"
-           {...methods.register('basic_info.passport')}
-           defaultValue={cvData?.extracted_data?.basic_info?.passport || ''}
-         />
-         <FormSelect
-           label="Remote Preference"
-           {...methods.register('basic_info.remote_preference')}
-           defaultValue={cvData?.extracted_data?.basic_info?.remote_preference || 'flexible'}
-           options={[
-             { value: 'remote_only', label: 'Remote Only' },
-             { value: 'hybrid', label: 'Hybrid' },
-             { value: 'onsite', label: 'On-site Only' },
-             { value: 'flexible', label: 'Flexible' }
-           ]}
-         />
-       </div>
-
        {/* Salary and Availability Information */}
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+       {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
          <FormInput
            label="Expected Minimum Salary (LKR)"
            type="number"
@@ -730,16 +673,16 @@ function CreateProfileContent() {
            {...methods.register('basic_info.expected_salary_max', { valueAsNumber: true })}
            defaultValue={cvData?.extracted_data?.basic_info?.expected_salary_max || 0}
          />
-       </div>
+       </div> */}
 
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
          <FormInput
            label="Notice Period (Days)"
            type="number"
            {...methods.register('basic_info.notice_period', { valueAsNumber: true })}
            defaultValue={cvData?.extracted_data?.basic_info?.notice_period || 30}
          />
-       </div>
+       </div> */}
 
        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
          <FormSelect
@@ -1011,7 +954,7 @@ function CreateProfileContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="text-sm text-gray-600">
-          {skillFields.length}/20 skills added
+          {skillFields.length} skills added
         </div>
         <Button
           type="button"
@@ -1019,14 +962,14 @@ function CreateProfileContent() {
             name: '',
             category: null
           })}
-          disabled={skillFields.length >= 20}
-          className={`${skillFields.length >= 20 ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+          // disabled={skillFields.length >= 20}
+          className={`bg-emerald-600 hover:bg-emerald-700`}
         >
           Add Skill
         </Button>
       </div>
 
-      {skillFields.length >= 20 && (
+      {/* {skillFields.length >= 20 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1037,7 +980,7 @@ function CreateProfileContent() {
             </p>
           </div>
         </div>
-      )}
+      )} */}
 
       {skillFields.length === 0 ? (
         <div className="text-center py-8 text-gray-500">

@@ -987,6 +987,44 @@ export async function POST(request: NextRequest) {
       console.log('✅ CV data merged successfully');
       console.log('📊 Merge results:', mergeResults);
 
+      // 7. Upload CV file to Supabase storage and save as resume
+      let resumeRecord = null;
+      let uploadResult = null;
+      
+      try {
+        console.log('📤 Uploading CV file to storage as resume...');
+        
+        // Import ResumeStorage for file upload
+        const { ResumeStorage } = await import('@/lib/resume-storage');
+        
+        // Upload file to storage
+        uploadResult = await ResumeStorage.uploadCVFile(file, payload.userId);
+        console.log('✅ CV file uploaded successfully:', uploadResult.publicUrl);
+        
+        // Create resume record in database
+        resumeRecord = await prisma.resume.create({
+          data: {
+            candidate_id: payload.userId,
+            is_allow_fetch: true,
+            resume_url: uploadResult.publicUrl,
+            original_filename: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            is_primary: false, // Don't override existing primary resume
+            uploaded_at: new Date(),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }
+        });
+        
+        console.log('✅ Resume record created:', resumeRecord.id);
+        
+      } catch (uploadError) {
+        console.error('❌ Resume upload failed:', uploadError);
+        // Continue with merge even if resume upload fails
+        // The extracted data is still valuable
+      }
+
       return NextResponse.json({
         success: true,
         message: 'CV data extracted and merged successfully',
@@ -997,6 +1035,8 @@ export async function POST(request: NextRequest) {
             type: file.type
           },
           merge_results: mergeResults,
+          resume_record: resumeRecord, // Include resume record if created
+          upload_result: uploadResult, // Include upload result if successful
           extracted_summary: {
             work_experiences_count: extractedData.work_experiences.length,
             educations_count: extractedData.educations.length,

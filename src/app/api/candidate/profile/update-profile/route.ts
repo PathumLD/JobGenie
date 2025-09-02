@@ -28,8 +28,6 @@ interface JWTPayload {
 interface UpdateBasicInfo {
   first_name?: string;
   last_name?: string;
-  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
-  date_of_birth?: string; // YYYY-MM-DD
   title?: string;
   current_position?: string;
   industry?: string;
@@ -38,11 +36,9 @@ interface UpdateBasicInfo {
   country?: string;
   city?: string;
   location?: string;
-  address?: string;
   phone1?: string;
   phone2?: string;
   personal_website?: string;
-  nic?: string;
   passport?: string;
   remote_preference?: 'remote_only' | 'hybrid' | 'onsite' | 'flexible';
   experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal';
@@ -387,11 +383,9 @@ export async function PUT(request: NextRequest) {
           country: updateData.basic_info?.country || null,
           city: updateData.basic_info?.city || null,
           location: updateData.basic_info?.location || null,
-          address: updateData.basic_info?.address || null,
           phone1: updateData.basic_info?.phone1 || null,
           phone2: updateData.basic_info?.phone2 || null,
           personal_website: updateData.basic_info?.personal_website || null,
-          nic: updateData.basic_info?.nic || null,
           passport: updateData.basic_info?.passport || null,
           remote_preference: updateData.basic_info?.remote_preference || 'flexible',
           experience_level: updateData.basic_info?.experience_level || 'entry',
@@ -536,8 +530,6 @@ export async function PUT(request: NextRequest) {
         // Basic info
         first_name: updateData.basic_info?.first_name,
         last_name: updateData.basic_info?.last_name,
-        gender: updateData.basic_info?.gender,
-        date_of_birth: updateData.basic_info?.date_of_birth ? new Date(updateData.basic_info.date_of_birth) : null,
         title: updateData.basic_info?.title,
         current_position: updateData.basic_info?.current_position,
         industry: updateData.basic_info?.industry,
@@ -546,11 +538,9 @@ export async function PUT(request: NextRequest) {
         country: updateData.basic_info?.country,
         city: updateData.basic_info?.city,
         location: updateData.basic_info?.location,
-        address: updateData.basic_info?.address,
         phone1: updateData.basic_info?.phone1,
         phone2: updateData.basic_info?.phone2,
         personal_website: updateData.basic_info?.personal_website,
-        nic: updateData.basic_info?.nic,
         passport: updateData.basic_info?.passport,
         remote_preference: updateData.basic_info?.remote_preference,
         experience_level: updateData.basic_info?.experience_level,

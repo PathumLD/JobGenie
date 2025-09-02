@@ -88,8 +88,9 @@ interface JobDetailResponse {
     creator_type: string;
     creator_mis_user?: {
       user_id: string;
-      access_level: string;
-      department: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      email: string;
     } | null;
   };
   
@@ -145,8 +146,9 @@ export async function GET(
         creator_mis_user: {
           select: {
             user_id: true,
-            access_level: true,
-            department: true
+            first_name: true,
+            last_name: true,
+            email: true
           }
         }
       }

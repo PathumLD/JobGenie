@@ -347,23 +347,19 @@ model Resume {
 
 model MisUser {
   user_id                    String             @id @db.Uuid
-  access_level               AccessLevel
-  department                 String?            @db.VarChar(100)
-  reporting_to               String?            @db.Uuid
-  data_access_scopes         Json?
-  job_posting_permissions    Boolean            @default(false)
-  can_post_for_all_companies Boolean            @default(false)
-  max_active_jobs            Int                @default(5)
+  first_name                 String?            @db.VarChar(100)
+  last_name                  String?            @db.VarChar(100)
+  email                      String             @unique @db.VarChar(255)
   created_at                 DateTime           @default(now())
   updated_at                 DateTime           @updatedAt
   jobs                       Job[]
   company_access             MisCompanyAccess[]
-  reporting                  MisUser?           @relation("MisUserHierarchy", fields: [reporting_to], references: [user_id])
   subordinates               MisUser[]          @relation("MisUserHierarchy")
+  reporting_to               String?            @db.Uuid
+  reporting                  MisUser?           @relation("MisUserHierarchy", fields: [reporting_to], references: [user_id])
   user                       User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([access_level])
-  @@index([job_posting_permissions])
+  @@index([reporting_to])
   @@map("mis_user")
 }
 

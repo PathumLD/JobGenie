@@ -38,7 +38,6 @@ interface ExtractedBasicInfo {
   personal_website?: string;
   github_url?: string;
   linkedin_url?: string;
-  portfolio_url?: string;
   years_of_experience?: number;
   gender?: string;
   date_of_birth?: string;
@@ -317,7 +316,6 @@ Extract candidate profile data from this CV and return STRICT JSON matching the 
     "personal_website": "string|null",
     "github_url": "string|null",
     "linkedin_url": "string|null",
-    "portfolio_url": "string|null",
     "years_of_experience": "number|null",
     "gender": "enum(male|female|other|prefer_not_to_say)|null",
     "date_of_birth": "YYYY-MM-DD|null",

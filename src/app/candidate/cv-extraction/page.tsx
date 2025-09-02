@@ -448,45 +448,6 @@ function CVExtractionContent() {
         <CardHeader>
           <CardTitle className="text-lg">Upload CV</CardTitle>
           
-          {/* Debug Authentication Button */}
-          <div className="mt-2 flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                console.log('🔍 Manual auth check triggered');
-                debugAuthStatus();
-                if (refreshTokenFromStorage()) {
-                  toast.success('Token refreshed successfully!');
-                } else {
-                  toast.error('Failed to refresh token');
-                }
-              }}
-              className="text-xs"
-            >
-              🔍 Check Auth Status
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const token = localStorage.getItem('access_token');
-                if (token) {
-                  console.log('🔑 Current token in localStorage:', token);
-                  console.log('🔑 Token length:', token.length);
-                  console.log('🔑 Token preview:', token.substring(0, 50) + '...');
-                  toast.success(`Token found: ${token.length} chars`);
-                } else {
-                  console.log('❌ No token in localStorage');
-                  toast.error('No token found in localStorage');
-                }
-              }}
-              className="text-xs"
-            >
-              🔑 Show Token
-            </Button>
-          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">

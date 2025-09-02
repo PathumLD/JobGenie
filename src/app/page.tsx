@@ -25,7 +25,7 @@ export default function Home() {
       <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-16">
           {/* Main Heading */}
-          <div className="text-center mb-12 sm:mb-16">
+          <div className="text-center  my-12 sm:my-16">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-emerald-900 mb-4 sm:mb-6 leading-tight">
               Your AI-Powered
               <span className="block text-emerald-600 mt-2">Career Partner</span>

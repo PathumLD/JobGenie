@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import type { CandidateRegistrationRequest } from '@/types/api';
+import Link from 'next/link';
 
 interface CandidateRegistrationFormProps {
   isLoading: boolean;
@@ -463,6 +464,16 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
         <a href="/candidate/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
           Sign in here
         </a>
+      </div>
+
+      <div className="text-center">
+        <p className="text-sm text-gray-500 mb-2">Do you want to see jobs?</p>
+        <Link 
+          href="/candidate/jobs" 
+          className="block text-lg border  px-4 py-2 rounded-md hover:bg-emerald-100 font-semibold text-emerald-600 hover:text-emerald-700 transition-colors py-3 border-b border-emerald-100"
+        >
+          See all Jobs
+        </Link>
       </div>
 
       {/* Terms and Privacy */}

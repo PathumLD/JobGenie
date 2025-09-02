@@ -1,6 +1,36 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function NotFound() {
+  const router = useRouter();
+
+  const handleGoBack = () => {
+    // Check if there's a previous page in browser history
+    if (window.history.length > 1) {
+      try {
+        // Check if the previous page is not the same as current (to avoid infinite loops)
+        const currentPath = window.location.pathname;
+        const referrer = document.referrer;
+        
+        if (referrer && !referrer.includes(currentPath)) {
+          router.back();
+        } else {
+          // If referrer is same page or invalid, go to home
+          router.push('/');
+        }
+      } catch (error) {
+        // If router.back() fails, try to go to home
+        console.log('Failed to go back, redirecting to home');
+        router.push('/');
+      }
+    } else {
+      // If no previous page, go to home
+      router.push('/');
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full text-center">
@@ -13,24 +43,14 @@ export default function NotFound() {
         </div>
         
         <div className="space-y-4">
-          <Link 
-            href="/"
+          <button 
+            onClick={handleGoBack}
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Go Home
-          </Link>
+            Go Back
+          </button>
           
-          <div className="text-sm text-gray-500">
-            <p>Or try one of these links:</p>
-            <div className="mt-2 space-x-4">
-              <Link href="/candidate/login" className="text-blue-600 hover:underline">
-                Login
-              </Link>
-              <Link href="/candidate/register" className="text-blue-600 hover:underline">
-                Register
-              </Link>
-            </div>
-          </div>
+          
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Plus, Minus } from 'lucide-react';
+import { authenticatedFetch } from '@/lib/auth-storage';
 
 interface MergeResults {
   basic_info_updated: boolean;
@@ -97,9 +98,8 @@ export default function UploadCVPage() {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('/api/candidate/profile/extract-and-merge-cv', {
+      const response = await authenticatedFetch('/api/candidate/profile/extract-and-merge-cv', {
         method: 'POST',
-        credentials: 'include',
         body: formData,
       });
 

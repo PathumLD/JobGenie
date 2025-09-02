@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { extractUserDataFromHeaders } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 import type { ApiErrorResponse } from '@/types/api';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 interface CandidateListResponse {
   message: string;
@@ -21,18 +24,27 @@ interface CandidateListResponse {
 
 export async function GET(request: NextRequest): Promise<NextResponse<CandidateListResponse | ApiErrorResponse>> {
   try {
-    // Extract user data from JWT token (set by middleware)
-    const userData = extractUserDataFromHeaders(request.headers);
+    // Extract and verify JWT token
+    const token = getTokenFromHeaders(request);
     
-    if (!userData.userId || !userData.email || !userData.role || !userData.userType) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized. Please log in again.' },
+        { error: 'Authentication token required' },
+        { status: 401 }
+      );
+    }
+
+    const decodedToken = verifyToken(token);
+    
+    if (!decodedToken) {
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
         { status: 401 }
       );
     }
 
     // Check if user has admin privileges (MIS or recruitment agency)
-    if (!['mis', 'recruitment_agency'].includes(userData.userType)) {
+    if (!['mis', 'recruitment_agency'].includes(decodedToken.role)) {
       return NextResponse.json(
         { error: 'Access denied. This endpoint requires admin privileges.' },
         { status: 403 }

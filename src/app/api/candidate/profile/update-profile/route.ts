@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { getTokenFromHeaders } from '@/lib/jwt';
 import { verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -212,7 +215,6 @@ function calculateProfileCompletion(basicInfo: UpdateBasicInfo): number {
   ];
   
   let completedFields = 0;
-  const totalFields = requiredFields.length + optionalFields.length;
   
   // Check required fields (weight: 2x)
   requiredFields.forEach(field => {
@@ -289,8 +291,7 @@ export async function PUT(request: NextRequest) {
     console.log('🔄 Candidate Profile Update API called');
 
     // 1. Authenticate user
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token')?.value;
+    const accessToken = getTokenFromHeaders(request);
     
     console.log('🔐 Auth check - Access token found:', !!accessToken);
     
@@ -1306,8 +1307,7 @@ export async function GET(request: NextRequest) {
     console.log('🔄 Get Candidate Profile API called');
 
     // 1. Authenticate user
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token')?.value;
+    const accessToken = getTokenFromHeaders(request);
     
     console.log('🔐 GET Auth check - Access token found:', !!accessToken);
     

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { CandidateProfileResponse, CandidateProfileErrorResponse, CandidateProfileSection } from '@/types/candidate-profile';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
@@ -23,8 +23,8 @@ export async function GET(
       );
     }
 
-    // Get JWT token from cookies
-    const token = getTokenFromCookies(request);
+    // Get JWT token from Authorization header
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(
@@ -254,23 +254,23 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 3,
         data: {
           type: 'experience',
-          experiences: candidate.work_experiences.map((exp: any) => ({
-            id: exp.id,
-            title: exp.title,
-            company: exp.company,
-            employment_type: exp.employment_type,
-            is_current: exp.is_current,
-            start_date: exp.start_date,
-            end_date: exp.end_date,
-            location: exp.location,
-            description: exp.description,
-            media_url: exp.media_url,
-            skill_ids: exp.skill_ids,
-            accomplishments: exp.accomplishments.map((acc: any) => ({
-              id: acc.id,
-              title: acc.title,
-              description: acc.description,
-              created_at: acc.created_at
+          experiences: candidate.work_experiences.map((exp: Record<string, unknown>) => ({
+            id: exp.id as string,
+            title: exp.title as string,
+            company: exp.company as string,
+            employment_type: exp.employment_type as 'full_time' | 'part_time' | 'contract' | 'internship' | 'freelance' | 'volunteer' | null,
+            is_current: exp.is_current as boolean,
+            start_date: exp.start_date as Date,
+            end_date: exp.end_date as Date | null,
+            location: exp.location as string | null,
+            description: exp.description as string | null,
+            media_url: exp.media_url as string | null,
+            skill_ids: exp.skill_ids as string[],
+            accomplishments: (exp.accomplishments as Record<string, unknown>[]).map((acc: Record<string, unknown>) => ({
+              id: acc.id as string,
+              title: acc.title as string,
+              description: acc.description as string,
+              created_at: acc.created_at as Date
             }))
           }))
         }
@@ -285,18 +285,18 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 4,
         data: {
           type: 'education',
-          educations: candidate.educations.map((edu: any) => ({
-            id: edu.id,
-            degree_diploma: edu.degree_diploma,
-            university_school: edu.university_school,
-            field_of_study: edu.field_of_study,
-            description: edu.description,
-            start_date: edu.start_date,
-            end_date: edu.end_date,
-            grade: edu.grade,
-            activities_societies: edu.activities_societies,
-            skill_ids: edu.skill_ids,
-            media_url: edu.media_url
+          educations: candidate.educations.map((edu: Record<string, unknown>) => ({
+            id: edu.id as string,
+            degree_diploma: edu.degree_diploma as string,
+            university_school: edu.university_school as string,
+            field_of_study: edu.field_of_study as string | null,
+            description: edu.description as string | null,
+            start_date: edu.start_date as Date,
+            end_date: edu.end_date as Date | null,
+            grade: edu.grade as string | null,
+            activities_societies: edu.activities_societies as string | null,
+            skill_ids: edu.skill_ids as string[],
+            media_url: edu.media_url as string | null
           }))
         }
       });
@@ -310,19 +310,19 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 5,
         data: {
           type: 'skills',
-          skills: candidate.skills.map((skill: any) => ({
-            id: skill.id,
-            name: skill.skill.name,
-            category: skill.skill.category,
-            description: skill.skill.description,
-            proficiency: skill.proficiency,
-            years_of_experience: skill.years_of_experience,
-            skill_source: skill.skill_source,
-            source_title: skill.source_title,
-            source_company: skill.source_company,
-            source_institution: skill.source_institution,
-            source_authority: skill.source_authority,
-            source_type: skill.source_type
+          skills: candidate.skills.map((skill: Record<string, unknown>) => ({
+            id: skill.id as string,
+            name: (skill.skill as Record<string, unknown>).name as string,
+            category: (skill.skill as Record<string, unknown>).category as string | null,
+            description: (skill.skill as Record<string, unknown>).description as string | null,
+            proficiency: skill.proficiency as number | null,
+            years_of_experience: skill.years_of_experience as number | null,
+            skill_source: skill.skill_source as string | null,
+            source_title: skill.source_title as string | null,
+            source_company: skill.source_company as string | null,
+            source_institution: skill.source_institution as string | null,
+            source_authority: skill.source_authority as string | null,
+            source_type: skill.source_type as string | null
           }))
         }
       });
@@ -336,24 +336,24 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 6,
         data: {
           type: 'projects',
-          projects: candidate.projects.map((project: any) => ({
-            id: project.id,
-            name: project.name,
-            description: project.description,
-            start_date: project.start_date,
-            end_date: project.end_date,
-            is_current: project.is_current,
-            role: project.role,
-            responsibilities: project.responsibilities,
-            technologies: project.technologies,
-            tools: project.tools,
-            methodologies: project.methodologies,
-            is_confidential: project.is_confidential,
-            can_share_details: project.can_share_details,
-            url: project.url,
-            repository_url: project.repository_url,
-            media_urls: project.media_urls,
-            skills_gained: project.skills_gained
+          projects: candidate.projects.map((project: Record<string, unknown>) => ({
+            id: project.id as string,
+            name: project.name as string,
+            description: project.description as string | null,
+            start_date: project.start_date as Date | null,
+            end_date: project.end_date as Date | null,
+            is_current: project.is_current as boolean,
+            role: project.role as string | null,
+            responsibilities: project.responsibilities as string | null,
+            technologies: project.technologies as string[],
+            tools: project.tools as string[],
+            methodologies: project.methodologies as string[],
+            is_confidential: project.is_confidential as boolean,
+            can_share_details: project.can_share_details as boolean,
+            url: project.url as string | null,
+            repository_url: project.repository_url as string | null,
+            media_urls: project.media_urls as string[],
+            skills_gained: project.skills_gained as string[]
           }))
         }
       });
@@ -367,17 +367,17 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 7,
         data: {
           type: 'certificates',
-          certificates: candidate.certificates.map((cert: any) => ({
-            id: cert.id,
-            name: cert.name,
-            issuing_authority: cert.issuing_authority,
-            issue_date: cert.issue_date,
-            expiry_date: cert.expiry_date,
-            credential_id: cert.credential_id,
-            credential_url: cert.credential_url,
-            description: cert.description,
-            skill_ids: cert.skill_ids,
-            media_url: cert.media_url
+          certificates: candidate.certificates.map((cert: Record<string, unknown>) => ({
+            id: cert.id as string,
+            name: cert.name as string,
+            issuing_authority: cert.issuing_authority as string,
+            issue_date: cert.issue_date as Date | null,
+            expiry_date: cert.expiry_date as Date | null,
+            credential_id: cert.credential_id as string | null,
+            credential_url: cert.credential_url as string | null,
+            description: cert.description as string | null,
+            skill_ids: cert.skill_ids as string[],
+            media_url: cert.media_url as string | null
           }))
         }
       });
@@ -391,12 +391,12 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 8,
         data: {
           type: 'languages',
-          languages: candidate.languages.map((lang: any) => ({
-            id: lang.id,
-            language: lang.language,
-            is_native: lang.is_native,
-            oral_proficiency: lang.oral_proficiency,
-            written_proficiency: lang.written_proficiency
+          languages: candidate.languages.map((lang: Record<string, unknown>) => ({
+            id: lang.id as string,
+            language: lang.language as string,
+            is_native: lang.is_native as boolean,
+            oral_proficiency: lang.oral_proficiency as string | null,
+            written_proficiency: lang.written_proficiency as string | null
           }))
         }
       });
@@ -410,15 +410,15 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 9,
         data: {
           type: 'awards',
-          awards: candidate.awards.map((award: any) => ({
-            id: award.id,
-            title: award.title,
-            associated_with: award.associated_with,
-            offered_by: award.offered_by,
-            date: award.date,
-            description: award.description,
-            media_url: award.media_url,
-            skill_ids: award.skill_ids
+          awards: candidate.awards.map((award: Record<string, unknown>) => ({
+            id: award.id as string,
+            title: award.title as string,
+            associated_with: award.associated_with as string | null,
+            offered_by: award.offered_by as string,
+            date: award.date as Date | null,
+            description: award.description as string | null,
+            media_url: award.media_url as string | null,
+            skill_ids: award.skill_ids as string[]
           }))
         }
       });
@@ -432,16 +432,16 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 10,
         data: {
           type: 'volunteering',
-          volunteering: candidate.volunteering.map((vol: any) => ({
-            id: vol.id,
-            role: vol.role,
-            institution: vol.institution,
-            cause: vol.cause,
-            start_date: vol.start_date,
-            end_date: vol.end_date,
-            is_current: vol.is_current,
-            description: vol.description,
-            media_url: vol.media_url
+          volunteering: candidate.volunteering.map((vol: Record<string, unknown>) => ({
+            id: vol.id as string,
+            role: vol.role as string,
+            institution: vol.institution as string,
+            cause: vol.cause as string | null,
+            start_date: vol.start_date as Date | null,
+            end_date: vol.end_date as Date | null,
+            is_current: vol.is_current as boolean,
+            description: vol.description as string | null,
+            media_url: vol.media_url as string | null
           }))
         }
       });
@@ -455,11 +455,11 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
         order: 11,
         data: {
           type: 'accomplishments',
-          accomplishments: candidate.accomplishments.map((acc: any) => ({
-            id: acc.id,
-            title: acc.title,
-            description: acc.description,
-            created_at: acc.created_at
+          accomplishments: candidate.accomplishments.map((acc: Record<string, unknown>) => ({
+            id: acc.id as string,
+            title: acc.title as string,
+            description: acc.description as string | null,
+            created_at: acc.created_at as Date
           }))
         }
       });
@@ -469,13 +469,13 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
   return sections;
 }
 
-function calculateProfileSummary(candidate: any) {
-  const totalExperienceYears = candidate.total_years_experience || candidate.years_of_experience || 0;
-  const totalProjects = candidate.projects?.length || 0;
-  const totalCertificates = candidate.certificates?.length || 0;
-  const totalSkills = candidate.skills?.length || 0;
-  const profileCompletionPercentage = candidate.profile_completion_percentage || 0;
-  const isApproved = candidate.isApproved || false;
+function calculateProfileSummary(candidate: Record<string, unknown>) {
+  const totalExperienceYears = (candidate.total_years_experience as number) || (candidate.years_of_experience as number) || 0;
+  const totalProjects = (candidate.projects as unknown[])?.length || 0;
+  const totalCertificates = (candidate.certificates as unknown[])?.length || 0;
+  const totalSkills = (candidate.skills as unknown[])?.length || 0;
+  const profileCompletionPercentage = (candidate.profile_completion_percentage as number) || 0;
+  const isApproved = (candidate.isApproved as boolean) || false;
 
   return {
     total_experience_years: totalExperienceYears,

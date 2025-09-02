@@ -1,7 +1,102 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { OAuthHandler } from '@/components/auth/OAuthHandler';
+import { useEffect, useState } from 'react';
 
 export default function CandidateJobsPage() {
+  const [shouldHandleOAuth, setShouldHandleOAuth] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkProfileAndOAuth = async () => {
+      try {
+        // Check if URL contains OAuth success parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const oauthSuccess = urlParams.get('oauth_success');
+        const tempToken = urlParams.get('temp_token');
+        const hasOAuthSuccess = oauthSuccess === 'true' && tempToken;
+        setShouldHandleOAuth(!!hasOAuthSuccess);
+
+        // Check profile completion
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (profileCheckResponse.ok) {
+            const profileData = await profileCheckResponse.json();
+            if (profileData.success) {
+              setIsProfileComplete(profileData.isProfileComplete);
+              
+              // If profile is incomplete, redirect to complete profile page
+              if (!profileData.isProfileComplete) {
+                console.log('Profile incomplete. Missing fields:', profileData.missingFields);
+                window.location.href = '/candidate/complete-profile';
+                return;
+              }
+            } else {
+              console.error('Profile completion check failed:', profileData.message);
+              // If check fails, assume profile is incomplete and redirect
+              window.location.href = '/candidate/complete-profile';
+              return;
+            }
+          } else {
+            console.error('Profile completion check request failed');
+            // If request fails, assume profile is incomplete and redirect
+            window.location.href = '/candidate/complete-profile';
+            return;
+          }
+        } else {
+          // No token, redirect to login
+          window.location.href = '/candidate/login';
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking profile completion:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkProfileAndOAuth();
+  }, []);
+
+  // Show loading state while checking profile
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking profile completion...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If OAuth tokens are present, show the OAuth handler
+  if (shouldHandleOAuth) {
+    return <OAuthHandler />;
+  }
+
+  // If profile is not complete, show loading (will redirect)
+  if (isProfileComplete === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to complete profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}

@@ -1,8 +1,13 @@
 'use client';
 
 import { useState } from "react";
+import Link from "next/link";
 
-export const Header = () => {
+interface HeaderProps {
+    showSkipLink?: boolean;
+}
+
+export const Header = ({ showSkipLink = false }: HeaderProps) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const toggleMobileMenu = () => {
@@ -15,10 +20,11 @@ export const Header = () => {
 
     return (
         <>
-            <header className="w-full bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-md">
+            <header className="w-full bg-white/80 backdrop-blur-sm fixed top-0 z-50 shadow-md">
                 <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
                     <div className="flex items-center justify-between">
                         {/* Logo */}
+                        <Link href="/">
                         <div className="flex items-center space-x-2 sm:space-x-3">
                             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
                                 <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,12 +33,21 @@ export const Header = () => {
                             </div>
                             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-emerald-900">Job Genie</h1>
                         </div>
+                        </Link>
 
                         {/* Desktop Navigation */}
                         <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
                             <a href="#about" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">About</a>
                             <a href="#features" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">Features</a>
                             <a href="#contact" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">Contact</a>
+                            {/* {showSkipLink && (
+                                <Link 
+                                    href="/candidate/jobs" 
+                                    className="text-emerald-600 border-emerald-600 border-2 px-4 py-2 rounded-md hover:text-emerald-800 transition-colors text-sm lg:text-base font-medium"
+                                >
+                                     Skip to Job View
+                                </Link>
+                            )} */}
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -90,6 +105,15 @@ export const Header = () => {
                                     >
                                         Contact
                                     </a>
+                                    {/* {showSkipLink && (
+                                        <Link 
+                                            href="/candidate/jobs" 
+                                            className="block text-2xl border  font-semibold text-emerald-600 hover:text-emerald-700 transition-colors py-3 border-b border-emerald-100"
+                                            onClick={closeMobileMenu}
+                                        >
+                                            Skip to Job View
+                                        </Link>
+                                    )} */}
                                 </div>
                             </nav>
                             

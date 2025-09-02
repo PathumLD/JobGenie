@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { authenticatedFetch } from '@/lib/auth-storage';
 
 interface Job {
   id: string;
@@ -28,14 +29,53 @@ export function CandidateDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
 
   useEffect(() => {
-    fetchJobs();
+    checkProfileCompletion();
   }, []);
+
+  const checkProfileCompletion = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (profileCheckResponse.ok) {
+          const profileData = await profileCheckResponse.json();
+          if (profileData.success) {
+            setIsProfileComplete(profileData.isProfileComplete);
+            
+            // If profile is incomplete, redirect to complete profile page
+            if (!profileData.isProfileComplete) {
+              window.location.href = '/candidate/complete-profile';
+              return;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking profile completion:', error);
+    } finally {
+      setIsCheckingProfile(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isProfileComplete) {
+      fetchJobs();
+    }
+  }, [isProfileComplete]);
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch('/api/candidate/jobs?limit=6');
+      const response = await authenticatedFetch('/api/candidate/jobs?limit=6');
       if (response.ok) {
         const data = await response.json();
         setJobs(data.jobs);
@@ -65,6 +105,15 @@ export function CandidateDashboard() {
       year: 'numeric'
     });
   };
+
+  if (isCheckingProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="ml-3 text-gray-600">Checking profile completion...</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

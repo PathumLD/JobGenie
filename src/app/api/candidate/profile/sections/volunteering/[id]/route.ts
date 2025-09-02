@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 // Types based on Prisma schema
 interface VolunteeringUpdateData {
@@ -48,7 +51,7 @@ export async function GET(
 ): Promise<NextResponse<VolunteeringResponse | VolunteeringErrorResponse>> {
   try {
     const { id } = await params;
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(
@@ -123,7 +126,7 @@ export async function PUT(
 ): Promise<NextResponse<VolunteeringResponse | VolunteeringErrorResponse>> {
   try {
     const { id } = await params;
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(
@@ -250,7 +253,7 @@ export async function DELETE(
 ): Promise<NextResponse<{ success: boolean; message: string } | VolunteeringErrorResponse>> {
   try {
     const { id } = await params;
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(

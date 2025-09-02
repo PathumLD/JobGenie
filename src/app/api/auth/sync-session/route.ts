@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { generateAccessToken, generateRefreshToken, setJWTCookies } from '@/lib/jwt';
+import { generateAccessToken } from '@/lib/jwt';
 import { PrismaClient } from '@prisma/client';
 import { generateMembershipNumberFromUserId } from '@/lib/membership';
 
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       // Update existing user with provider info if not already set
-      const updateData: any = {};
+      const updateData: Record<string, string> = {};
       if (!existingUser.provider_id) {
         updateData.provider = provider;
         updateData.provider_id = supabase_user_id;
@@ -141,7 +141,6 @@ export async function POST(request: NextRequest) {
     };
 
     const accessToken = generateAccessToken(jwtPayload);
-    const refreshToken = generateRefreshToken(jwtPayload);
 
     // Create response (same format as email/password login)
     const response = NextResponse.json({
@@ -159,11 +158,11 @@ export async function POST(request: NextRequest) {
       },
       user_type: user.role,
       access_token: accessToken,
-      refresh_token: refreshToken
     });
 
-    // Use the same cookie setting method as email/password login
-    return setJWTCookies(response, accessToken, refreshToken);
+    // Return response with tokens in body (no cookies)
+    console.log('OAuth sync successful - tokens returned in response body');
+    return response;
   } catch (error) {
     console.error('Session sync error:', error);
     return NextResponse.json(

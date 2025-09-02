@@ -71,6 +71,7 @@ const FormSelect = React.forwardRef<HTMLSelectElement, FormSelectProps>(
             id={selectId}
             ref={ref}
             className={selectClasses}
+            defaultValue={props.defaultValue}
             {...props}
           >
             {placeholder && (

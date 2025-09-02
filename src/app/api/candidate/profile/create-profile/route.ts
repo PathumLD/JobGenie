@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { getTokenFromHeaders } from '@/lib/jwt';
 import { verifyToken } from '@/lib/jwt';
 import { generateMembershipNumberFromUserId } from '@/lib/membership';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -122,10 +125,10 @@ interface ProfileFormData {
   awards: Award[];
 }
 
-interface CreateProfileRequest {
-  profileData: ProfileFormData;
-  extractedResume?: File | null;
-}
+// interface CreateProfileRequest {
+//   profileData: ProfileFormData;
+//   extractedResume?: File | null;
+// }
 
 // Helper function to upload resume to Supabase storage
 async function uploadResume(file: File, candidateId: string): Promise<string> {
@@ -157,8 +160,7 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Candidate Profile Creation API called');
 
     // 1. Authenticate user
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token')?.value;
+    const accessToken = getTokenFromHeaders(request);
     
     if (!accessToken) {
       return NextResponse.json(

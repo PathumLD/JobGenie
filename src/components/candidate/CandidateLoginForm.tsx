@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { tokenStorage } from '@/lib/auth-storage';
 import Link from 'next/link';
 
 interface LoginFormData {
@@ -84,6 +85,12 @@ export function CandidateLoginForm() {
       const data = await response.json();
 
       if (response.ok) {
+        // Store access token in localStorage
+        if (data.access_token) {
+          tokenStorage.setAccessToken(data.access_token);
+          console.log('Login successful - access token stored in localStorage');
+        }
+
         // Check if user is a candidate
         if (data.user_type === 'candidate') {
           // Redirect to candidate dashboard or landing page

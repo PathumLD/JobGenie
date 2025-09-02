@@ -5,8 +5,8 @@ import type { ApiErrorResponse } from '@/types/api';
 
 const prisma = new PrismaClient();
 
-// Type for complex Prisma where clauses
-type JobWhereClause = Prisma.JobWhereInput;
+// Type for complex Prisma where clauses (unused but kept for future reference)
+// type JobWhereClause = Prisma.JobWhereInput;
 
 // Validation schema for job search and filtering
 const jobSearchSchema = z.object({

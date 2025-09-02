@@ -8,6 +8,7 @@ import { FormInput } from '@/components/ui/form-input';
 import { FormSelect } from '@/components/ui/form-select';
 import { toast } from 'sonner';
 import { BasicInfoSection } from '@/types/candidate-profile';
+import { authenticatedFetch } from '@/lib/auth-storage';
 
 interface EditBasicInfoModalProps {
   isOpen: boolean;
@@ -211,9 +212,8 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
       const profileFormData = new FormData();
       profileFormData.append('profileData', JSON.stringify(updateData));
 
-      const response = await fetch('/api/candidate/profile/update-profile', {
+      const response = await authenticatedFetch('/api/candidate/profile/update-profile', {
         method: 'PUT',
-        credentials: 'include',
         body: profileFormData,
       });
 

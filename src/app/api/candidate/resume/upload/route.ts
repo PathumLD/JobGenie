@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
-import * as jwt from 'jsonwebtoken';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -14,8 +17,13 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 interface JWTPayload {
   userId: string;
   email: string;
-  role: string;
-  exp: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  membership_no?: string;
+  role: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  exp?: number;
+  iat?: number;
 }
 
 interface ResumeUploadData {
@@ -65,132 +73,6 @@ type SkillData = {
   name: string;
 };
 
-type ResumeData = 
-  | { type: 'work_experience'; data: WorkExperienceData }
-  | { type: 'education'; data: EducationData }
-  | { type: 'certificate'; data: CertificateData }
-  | { type: 'project'; data: ProjectData }
-  | { type: 'award'; data: AwardData }
-  | { type: 'volunteering'; data: VolunteeringData }
-  | { type: 'language'; data: LanguageData }
-  | { type: 'skill'; data: SkillData };
-
-async function checkDuplicateData(
-  candidateId: string,
-  dataType: 'work_experience' | 'education' | 'certificate' | 'project' | 'award' | 'volunteering' | 'language' | 'skill',
-  data: WorkExperienceData | EducationData | CertificateData | ProjectData | AwardData | VolunteeringData | LanguageData | SkillData
-): Promise<boolean> {
-  try {
-    switch (dataType) {
-      case 'work_experience': {
-        const workData = data as WorkExperienceData;
-        const existingWorkExp = await prisma.workExperience.findFirst({
-          where: {
-            candidate_id: candidateId,
-            title: { equals: workData.title, mode: 'insensitive' },
-            company: { equals: workData.company, mode: 'insensitive' },
-            employment_type: workData.employment_type
-          }
-        });
-        return !!existingWorkExp;
-      }
-
-      case 'education': {
-        const eduData = data as EducationData;
-        const existingEdu = await prisma.education.findFirst({
-          where: {
-            candidate_id: candidateId,
-            degree_diploma: { equals: eduData.degree_diploma, mode: 'insensitive' },
-            university_school: { equals: eduData.university_school, mode: 'insensitive' }
-          }
-        });
-        return !!existingEdu;
-      }
-
-      case 'certificate': {
-        const certData = data as CertificateData;
-        const existingCert = await prisma.certificate.findFirst({
-          where: {
-            candidate_id: candidateId,
-            name: { equals: certData.name, mode: 'insensitive' },
-            issuing_authority: { equals: certData.issuing_authority, mode: 'insensitive' }
-          }
-        });
-        return !!existingCert;
-      }
-
-      case 'project': {
-        const projData = data as ProjectData;
-        const existingProj = await prisma.project.findFirst({
-          where: {
-            candidate_id: candidateId,
-            name: { equals: projData.name, mode: 'insensitive' }
-          }
-        });
-        return !!existingProj;
-      }
-
-      case 'award': {
-        const awardData = data as AwardData;
-        const existingAward = await prisma.award.findFirst({
-          where: {
-            candidate_id: candidateId,
-            title: { equals: awardData.title, mode: 'insensitive' },
-            offered_by: { equals: awardData.offered_by, mode: 'insensitive' }
-          }
-        });
-        return !!existingAward;
-      }
-
-      case 'volunteering': {
-        const volData = data as VolunteeringData;
-        const existingVol = await prisma.volunteering.findFirst({
-          where: {
-            candidate_id: candidateId,
-            role: { equals: volData.role, mode: 'insensitive' },
-            institution: { equals: volData.institution, mode: 'insensitive' }
-          }
-        });
-        return !!existingVol;
-      }
-
-      case 'language': {
-        const langData = data as LanguageData;
-        const existingLang = await prisma.language.findFirst({
-          where: {
-            candidate_id: candidateId,
-            language: { equals: langData.language, mode: 'insensitive' }
-          }
-        });
-        return !!existingLang;
-      }
-
-      case 'skill': {
-        const skillData = data as SkillData;
-        const existingSkill = await prisma.candidateSkill.findFirst({
-          where: {
-            candidate_id: candidateId,
-            skill: {
-              name: { equals: skillData.name, mode: 'insensitive' }
-            }
-          },
-          include: {
-            skill: true
-          }
-        });
-        return !!existingSkill;
-      }
-
-      default:
-        return false;
-    }
-  } catch (error) {
-    console.error(`❌ Error in duplicate detection for ${dataType}:`, error);
-    // If error occurs, be conservative and treat as duplicate to prevent data corruption
-    return true;
-  }
-}
-
 // Helper function to upload resume to Supabase storage
 async function uploadResume(file: File, candidateId: string): Promise<{ filePath: string; publicUrl: string }> {
   const fileName = `${Date.now()}_${file.name}`;
@@ -238,30 +120,26 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Resume Upload API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -424,30 +302,26 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔄 Get Candidate Resumes API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -493,30 +367,26 @@ export async function PUT(request: NextRequest) {
   try {
     console.log('🔄 Resume Update API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -605,30 +475,26 @@ export async function DELETE(request: NextRequest) {
   try {
     console.log('🔄 Resume Delete API called');
 
-    // 1. Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Authenticate user - get token from Authorization header
+    const token = getTokenFromHeaders(request);
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header required' },
+        { error: 'Authentication required. Please login again.' },
         { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
       );
     }
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(token) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }

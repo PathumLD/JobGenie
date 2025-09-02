@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractUserDataFromHeaders } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 import type { ApiErrorResponse } from '@/types/api';
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 interface DashboardResponse {
   message: string;
@@ -22,18 +25,27 @@ interface DashboardResponse {
 
 export async function GET(request: NextRequest): Promise<NextResponse<DashboardResponse | ApiErrorResponse>> {
   try {
-    // Extract user data from JWT token (set by middleware)
-    const userData = extractUserDataFromHeaders(request.headers);
+    // Extract and verify JWT token
+    const token = getTokenFromHeaders(request);
     
-    if (!userData.userId || !userData.email || !userData.role || !userData.userType) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized. Please log in again.' },
+        { error: 'Authentication token required' },
+        { status: 401 }
+      );
+    }
+
+    const decodedToken = verifyToken(token);
+    
+    if (!decodedToken) {
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
         { status: 401 }
       );
     }
 
     // Check if user is a candidate
-    if (userData.userType !== 'candidate') {
+    if (decodedToken.role !== 'candidate') {
       return NextResponse.json(
         { error: 'Access denied. This endpoint is only for candidates.' },
         { status: 403 }
@@ -51,13 +63,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<DashboardR
       {
         message: 'Dashboard data retrieved successfully',
         userData: {
-          userId: userData.userId,
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          membershipNo: userData.membershipNo,
-          role: userData.role,
-          userType: userData.userType
+          userId: decodedToken.userId,
+          email: decodedToken.email,
+          firstName: decodedToken.first_name ?? null,
+          lastName: decodedToken.last_name ?? null,
+          membershipNo: decodedToken.membership_no ?? null,
+          role: decodedToken.role,
+          userType: decodedToken.userType
         },
         dashboardData
       },

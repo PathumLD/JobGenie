@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { tokenStorage } from '@/lib/auth-storage';
 
 export function OAuthSessionHandler() {
   const router = useRouter();
@@ -13,26 +14,65 @@ export function OAuthSessionHandler() {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        // Check if we have OAuth tokens in the URL hash
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
+        // Check if we have OAuth success parameters in the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const oauthSuccess = urlParams.get('oauth_success');
+        const tempToken = urlParams.get('temp_token');
 
-        // Also check if we have a session in Supabase (from localStorage)
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-
-        if (accessToken || session) {
-          console.log('🔍 OAuth session detected, processing...');
+        if (oauthSuccess === 'true' && tempToken) {
+          console.log('🔍 OAuth success detected, processing token...');
           setIsProcessing(true);
 
-          if (sessionError) {
-            console.error('Session error:', sessionError);
-            setError(`Authentication failed: ${sessionError.message}`);
-            return;
+          try {
+            // Store the access token in localStorage
+            tokenStorage.setAccessToken(tempToken);
+            console.log('✅ OAuth access token stored in localStorage');
+            
+            // Clean up the URL by removing the OAuth parameters
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+            
+            // Check profile completion before redirecting
+            try {
+              const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+                headers: {
+                  'Authorization': `Bearer ${tempToken}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (profileCheckResponse.ok) {
+                const profileData = await profileCheckResponse.json();
+                if (profileData.success && profileData.isProfileComplete) {
+                  // Profile is complete, redirect to jobs page
+                  console.log('✅ Profile complete, redirecting to jobs page...');
+                  router.push('/candidate/jobs');
+                } else {
+                  // Profile incomplete, redirect to complete profile page
+                  console.log('⚠️ Profile incomplete. Missing fields:', profileData.missingFields);
+                  router.push('/candidate/complete-profile');
+                }
+              } else {
+                // If profile check fails, redirect to complete profile page as fallback
+                console.warn('⚠️ Profile check failed, redirecting to complete profile page...');
+                router.push('/candidate/complete-profile');
+              }
+            } catch (profileError) {
+              console.error('Profile completion check error:', profileError);
+              // If profile check fails, redirect to complete profile page as fallback
+              router.push('/candidate/complete-profile');
+            }
+          } catch (tokenError) {
+            console.error('Token storage error:', tokenError);
+            setError('Failed to store authentication token');
           }
+        } else {
+          // Check if we have a session in Supabase (from localStorage)
+          const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
 
           if (session?.user) {
             console.log('✅ Valid session found, syncing with backend...');
+            setIsProcessing(true);
             
             // Sync the session with our backend
             const response = await fetch('/api/auth/sync-session', {
@@ -49,18 +89,55 @@ export function OAuthSessionHandler() {
             });
 
             if (response.ok) {
-              console.log('✅ Session sync successful, redirecting to dashboard...');
+              const data = await response.json();
+              console.log('✅ Session sync successful, storing token in localStorage...');
+              
+              // Store the JWT token in localStorage
+              if (data.access_token) {
+                tokenStorage.setAccessToken(data.access_token);
+                console.log('✅ OAuth access token stored in localStorage');
+              } else {
+                console.warn('⚠️ No access token received from sync-session API');
+              }
+              
               // Clean up the URL by removing the hash
               window.history.replaceState({}, document.title, window.location.pathname);
-              // Redirect to jobs page
-              router.push('/candidate/jobs');
+              
+              // Check profile completion before redirecting
+              try {
+                const profileCheckResponse = await fetch('/api/candidate/profile/profile-completion-check', {
+                  headers: {
+                    'Authorization': `Bearer ${data.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+
+                if (profileCheckResponse.ok) {
+                  const profileData = await profileCheckResponse.json();
+                  if (profileData.success && profileData.isProfileComplete) {
+                    // Profile is complete, redirect to jobs page
+                    console.log('✅ Profile complete, redirecting to jobs page...');
+                    router.push('/candidate/jobs');
+                  } else {
+                    // Profile incomplete, redirect to complete profile page
+                    console.log('⚠️ Profile incomplete. Missing fields:', profileData.missingFields);
+                    router.push('/candidate/complete-profile');
+                  }
+                } else {
+                  // If profile check fails, redirect to complete profile page as fallback
+                  console.warn('⚠️ Profile check failed, redirecting to complete profile page...');
+                  router.push('/candidate/complete-profile');
+                }
+              } catch (profileError) {
+                console.error('Profile completion check error:', profileError);
+                // If profile check fails, redirect to complete profile page as fallback
+                router.push('/candidate/complete-profile');
+              }
             } else {
               const errorData = await response.json();
               console.error('Session sync failed:', errorData);
               setError(`Failed to complete authentication: ${errorData.error || 'Unknown error'}`);
             }
-          } else {
-            setError('No user session found after OAuth.');
           }
         }
       } catch (error) {
@@ -71,14 +148,18 @@ export function OAuthSessionHandler() {
       }
     };
 
-    // Run if we have tokens in URL hash OR if we just completed OAuth (check session)
+    // Run if we have OAuth success parameters in URL OR if we just completed OAuth
     if (typeof window !== 'undefined') {
-      const hasTokensInHash = window.location.hash.includes('access_token');
+      const urlParams = new URLSearchParams(window.location.search);
+      const oauthSuccess = urlParams.get('oauth_success');
+      const tempToken = urlParams.get('temp_token');
+      
+      const hasOAuthSuccess = oauthSuccess === 'true' && tempToken;
       const justCompletedOAuth = window.location.href.includes('google') || 
                                 document.referrer.includes('google') ||
                                 sessionStorage.getItem('oauth-in-progress') === 'true';
       
-      if (hasTokensInHash || justCompletedOAuth) {
+      if (hasOAuthSuccess || justCompletedOAuth) {
         // Clear the flag
         sessionStorage.removeItem('oauth-in-progress');
         handleOAuthCallback();
@@ -112,15 +193,33 @@ export function OAuthSessionHandler() {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-4">Authentication Error</h2>
             <p className="text-gray-600 mb-6">{error}</p>
-            <button
-              onClick={() => {
-                setError(null);
-                window.location.reload();
-              }}
-              className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              Try Again
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setError(null);
+                  window.location.reload();
+                }}
+                className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Try Again
+              </button>
+              
+              <button
+                onClick={() => {
+                  setError(null);
+                  // Go back to previous page if possible
+                  if (window.history.length > 1) {
+                    window.history.back();
+                  } else {
+                    // If no previous page, go to login
+                    window.location.href = '/candidate/login';
+                  }
+                }}
+                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Go Back
+              </button>
+            </div>
           </div>
         </div>
       </div>

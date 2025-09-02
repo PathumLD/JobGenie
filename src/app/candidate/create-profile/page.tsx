@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { FormSelect } from '@/components/ui/form-select';
 import { toast } from 'sonner';
+import { authenticatedFetch } from '@/lib/auth-storage';
 
 // Types
 interface BasicInfo {
@@ -294,7 +295,7 @@ export default function CreateProfilePage() {
   useEffect(() => {
     const loadDesignations = async () => {
       try {
-        const response = await fetch('/api/candidate/designations');
+        const response = await authenticatedFetch('/api/candidate/designations');
         if (response.ok) {
           const data = await response.json();
           setDesignations(data.designations || []);
@@ -387,9 +388,8 @@ export default function CreateProfilePage() {
           const imageFormData = new FormData();
           imageFormData.append('profile_image', selectedImageFile);
 
-          const imageResponse = await fetch('/api/candidate/profile/upload-image', {
+          const imageResponse = await authenticatedFetch('/api/candidate/profile/upload-image', {
             method: 'POST',
-            credentials: 'include',
             body: imageFormData,
           });
 
@@ -450,9 +450,8 @@ export default function CreateProfilePage() {
        }
 
       console.log('🔄 Sending profile update request...');
-      const response = await fetch('/api/candidate/profile/update-profile', {
+      const response = await authenticatedFetch('/api/candidate/profile/update-profile', {
         method: 'PUT',
-        credentials: 'include',
         body: profileFormData,
       });
 

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { getTokenFromCookies, verifyToken } from '@/lib/jwt';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
+
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
 
 // Types based on Prisma schema
 interface BasicInfoUpdateData {
@@ -12,6 +15,8 @@ interface BasicInfoUpdateData {
   phone?: string;
   date_of_birth?: string;
   gender?: string;
+  nic?: string;
+  address?: string;
   profile_image_url?: string;
   bio?: string;
   location?: string;
@@ -146,7 +151,7 @@ export async function PUT(
   request: NextRequest
 ): Promise<NextResponse<BasicInfoResponse | BasicInfoErrorResponse>> {
   try {
-    const token = getTokenFromCookies(request);
+    const token = getTokenFromHeaders(request);
     
     if (!token) {
       return NextResponse.json(
@@ -256,9 +261,11 @@ export async function PUT(
     if (body.first_name !== undefined) updateData.first_name = body.first_name;
     if (body.last_name !== undefined) updateData.last_name = body.last_name;
     if (body.email !== undefined) updateData.email = body.email;
-    if (body.phone !== undefined) updateData.phone = body.phone;
     if (dateOfBirth !== undefined) updateData.date_of_birth = dateOfBirth;
     if (body.gender !== undefined) updateData.gender = body.gender;
+    if (body.nic !== undefined) updateData.nic = body.nic;
+    if (body.address !== undefined) updateData.address = body.address;
+    if (body.phone !== undefined) updateData.phone1 = body.phone;
     if (body.profile_image_url !== undefined) updateData.profile_image_url = body.profile_image_url;
     if (body.bio !== undefined) updateData.bio = body.bio;
     if (body.location !== undefined) updateData.location = body.location;
@@ -312,9 +319,16 @@ export async function PUT(
     if (body.preferences !== undefined) updateData.preferences = body.preferences;
     if (body.metadata !== undefined) updateData.metadata = body.metadata;
 
+    console.log('🔍 Basic info update - updating candidate profile');
+    console.log('📊 Update data:', updateData);
+
     const updatedCandidate = await prisma.candidate.update({
       where: { user_id: userId },
       data: updateData
+    });
+
+    console.log('💾 Database update completed. Updated candidate:', {
+      user_id: updatedCandidate.user_id
     });
 
     // Map the Prisma result to match the expected response type

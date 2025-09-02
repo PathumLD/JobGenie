@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
+import { authenticatedFetch, debugAuthStatus, refreshTokenFromStorage } from '@/lib/auth-storage';
 
 import { toast } from 'sonner';
 
@@ -235,11 +236,34 @@ export default function CVExtractionPage() {
     setError(null);
 
     try {
+      // Debug authentication status before making API calls
+      console.log('🔍 === CV EXTRACTION DEBUG ===');
+      debugAuthStatus();
+      
+      // Try to refresh token if needed
+      if (!refreshTokenFromStorage()) {
+        console.log('❌ Failed to refresh token, redirecting to login...');
+        window.location.href = '/candidate/login';
+        return;
+      }
+      
+      console.log('✅ Token refreshed, proceeding with API calls...');
+      
       // First check if user has an existing profile
-      const profileCheckResponse = await fetch('/api/candidate/profile/current', {
+      const profileCheckResponse = await authenticatedFetch('/api/candidate/profile/current', {
         method: 'GET',
-        credentials: 'include',
       });
+
+      if (!profileCheckResponse.ok) {
+        if (profileCheckResponse.status === 401) {
+          console.log('❌ Authentication failed during profile check');
+          debugAuthStatus();
+          throw new Error('Authentication failed. Please login again.');
+        }
+        
+        const errorData = await profileCheckResponse.json();
+        throw new Error(errorData.error || 'Failed to check profile status');
+      }
 
       const hasExistingProfile = profileCheckResponse.ok;
 
@@ -248,9 +272,8 @@ export default function CVExtractionPage() {
         const formData = new FormData();
         formData.append('file', selectedFile);
 
-        const response = await fetch('/api/candidate/profile/extract-and-merge-cv', {
+        const response = await authenticatedFetch('/api/candidate/profile/extract-and-merge-cv', {
           method: 'POST',
-          credentials: 'include',
           body: formData,
         });
 
@@ -280,16 +303,21 @@ export default function CVExtractionPage() {
         const formData = new FormData();
         formData.append('file', selectedFile);
 
-        const response = await fetch('/api/candidate/profile/extract-cv', {
+        const response = await authenticatedFetch('/api/candidate/profile/extract-cv', {
           method: 'POST',
-          credentials: 'include',
           body: formData,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to extract CV data');
+              if (!response.ok) {
+        if (response.status === 401) {
+          console.log('❌ Authentication failed during CV extraction');
+          debugAuthStatus();
+          throw new Error('Authentication failed. Please login again.');
         }
+        
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to extract CV data');
+      }
 
         const result: ExtractionResponse = await response.json();
         
@@ -355,6 +383,46 @@ export default function CVExtractionPage() {
       <Card className="bg-white border-0 shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg">Upload CV</CardTitle>
+          
+          {/* Debug Authentication Button */}
+          <div className="mt-2 flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                console.log('🔍 Manual auth check triggered');
+                debugAuthStatus();
+                if (refreshTokenFromStorage()) {
+                  toast.success('Token refreshed successfully!');
+                } else {
+                  toast.error('Failed to refresh token');
+                }
+              }}
+              className="text-xs"
+            >
+              🔍 Check Auth Status
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const token = localStorage.getItem('access_token');
+                if (token) {
+                  console.log('🔑 Current token in localStorage:', token);
+                  console.log('🔑 Token length:', token.length);
+                  console.log('🔑 Token preview:', token.substring(0, 50) + '...');
+                  toast.success(`Token found: ${token.length} chars`);
+                } else {
+                  console.log('❌ No token in localStorage');
+                  toast.error('No token found in localStorage');
+                }
+              }}
+              className="text-xs"
+            >
+              🔑 Show Token
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">

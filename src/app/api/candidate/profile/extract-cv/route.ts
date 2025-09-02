@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import jwt from 'jsonwebtoken';
+import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 
 // Types based on schema.prisma - following exact structure
 interface JWTPayload {
   userId: string;
   email: string;
-  role: string;
-  exp: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  membership_no?: string;
+  role: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  exp?: number;
+  iat?: number;
 }
 
 interface ExtractedBasicInfo {
@@ -366,12 +371,15 @@ function calculateYearsOfExperience(workExperiences: ExtractedWorkExperience[]):
   return Math.round(totalMonths / 12);
 }
 
+// Force Node.js runtime for this API route
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     console.log('🔄 CV Data Extraction API called');
 
-    // 1. Authenticate user - get token from cookies instead of Authorization header
-    const accessToken = request.cookies.get('access_token')?.value;
+    // 1. Authenticate user - get token from Authorization header
+    const accessToken = getTokenFromHeaders(request);
     
     if (!accessToken) {
       return NextResponse.json(
@@ -380,16 +388,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+
 
     let payload: JWTPayload;
     try {
-      payload = jwt.verify(accessToken, process.env.JWT_SECRET) as JWTPayload;
+      payload = verifyToken(accessToken) as JWTPayload;
+      if (!payload) {
+        throw new Error('Token verification failed');
+      }
     } catch (error) {
       console.error('❌ Token verification failed:', error);
       return NextResponse.json(
@@ -475,7 +481,7 @@ export async function POST(request: NextRequest) {
         
         extractedData = JSON.parse(cleanedText);
         console.log('✅ JSON parsed successfully');
-      } catch (error) {
+      } catch (_error) {
         console.error('❌ Failed to parse AI response:', text);
         throw new Error('Invalid AI response format');
       }

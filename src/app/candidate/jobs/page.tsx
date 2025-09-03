@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { OAuthHandler } from '@/components/auth/OAuthHandler';
+import { ApprovalNotification } from '@/components/candidate/ApprovalNotification';
 import { useEffect, useState } from 'react';
 
 export default function CandidateJobsPage() {
@@ -11,6 +12,7 @@ export default function CandidateJobsPage() {
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [hasResumes, setHasResumes] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showApprovalNotification, setShowApprovalNotification] = useState(false);
 
   useEffect(() => {
     const checkProfileAndOAuth = async () => {
@@ -37,6 +39,11 @@ export default function CandidateJobsPage() {
             if (profileData.success) {
               setIsProfileComplete(profileData.isProfileComplete);
               setApprovalStatus(profileData.approval_status);
+              
+              // Show approval notification if approved and not dismissed
+              if (profileData.approval_status === 'approved' && !profileData.approval_notification_dismissed) {
+                setShowApprovalNotification(true);
+              }
               
               // If profile is incomplete, redirect to complete profile page
               if (!profileData.isProfileComplete) {
@@ -130,6 +137,13 @@ export default function CandidateJobsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Approval Notification */}
+      {showApprovalNotification && (
+        <ApprovalNotification 
+          onDismiss={() => setShowApprovalNotification(false)} 
+        />
+      )}
+
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>

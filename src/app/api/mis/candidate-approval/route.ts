@@ -77,6 +77,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
                   where: { user_id: candidateId },
                   data: { 
                     approval_status: 'approved',
+                    approval_notification_dismissed: false, // Reset notification for new approvals
                     updated_at: new Date()
                   },
                   include: {
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
                   }
                 });
 
-                                 // Also update user status to active if candidate is approved
+                // Also update user status to active if candidate is approved
                  await tx.user.update({
                    where: { id: candidateId },
                    data: { 
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Candidate
               where: { user_id: candidateId },
               data: { 
                 approval_status: isApproving ? 'approved' : 'rejected',
+                approval_notification_dismissed: isApproving ? false : true, // Reset notification for new approvals
                 updated_at: new Date()
               },
               include: {

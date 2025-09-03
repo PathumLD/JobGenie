@@ -8,8 +8,17 @@ import { ProfileImageUpload } from '@/components/candidate/ProfileImageUpload';
 import { EditBasicInfoModal } from '@/components/candidate/EditBasicInfoModal';
 import { CandidateProfileResponse, BasicInfoSection } from '@/types/candidate-profile';
 import { authenticatedFetch } from '@/lib/auth-storage';
+import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
 
 export default function CandidateProfilePage() {
+  return (
+    <CandidateAuthGuard>
+      <CandidateProfileContent />
+    </CandidateAuthGuard>
+  );
+}
+
+function CandidateProfileContent() {
   const [profileData, setProfileData] = useState<CandidateProfileResponse['data'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

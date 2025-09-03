@@ -589,12 +589,65 @@ export async function POST(request: NextRequest) {
       console.log('📊 EXTRACTION COMPLETE - Data ready for form population');
       console.log('=====================================\n');
 
-      // 7. Convert file to base64 for storage
+      // 7. Upload CV file to Supabase storage and save as resume
+      let resumeRecord = null;
+      let uploadResult = null;
+      
+      try {
+        console.log('📤 Uploading CV file to storage as resume...');
+        
+        // Import ResumeStorage for file upload
+        const { ResumeStorage } = await import('@/lib/resume-storage');
+        
+        // Upload file to storage
+        uploadResult = await ResumeStorage.uploadCVFile(file, payload.userId);
+        console.log('✅ CV file uploaded successfully:', uploadResult.publicUrl);
+
+        // Create resume record in database
+        // Ensure prisma is imported and available
+        const { PrismaClient } = await import('@prisma/client');
+        const prisma = new PrismaClient();
+
+        resumeRecord = await prisma.resume.create({
+          data: {
+            candidate_id: payload.userId,
+            is_allow_fetch: true,
+            resume_url: uploadResult.publicUrl,
+            original_filename: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            is_primary: true, // Set as primary since this is the first resume
+            uploaded_at: new Date(),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }
+        });
+        
+        console.log('✅ Resume record created:', resumeRecord.id);
+        
+        // Update candidate table with resume URL
+        await prisma.candidate.update({
+          where: { user_id: payload.userId },
+          data: {
+            resume_url: uploadResult.publicUrl,
+            updated_at: new Date(),
+          }
+        });
+        
+        console.log('✅ Candidate resume_url updated');
+        
+      } catch (uploadError) {
+        console.error('❌ Resume upload failed:', uploadError);
+        // Continue with extraction even if resume upload fails
+        // The extracted data is still valuable
+      }
+
+      // 8. Convert file to base64 for storage (fallback for frontend)
       const resumeArrayBuffer = await file.arrayBuffer();
       const resumeBase64Data = Buffer.from(resumeArrayBuffer).toString('base64');
       const resumeFileData = `data:${file.type};base64,${resumeBase64Data}`;
 
-      // 8. Return extracted data for frontend form population
+      // 9. Return extracted data for frontend form population
       return NextResponse.json({
         success: true,
         message: 'CV data extracted successfully',
@@ -606,6 +659,8 @@ export async function POST(request: NextRequest) {
             type: file.type,
           },
           resumeFile: resumeFileData, // Store resume file as base64
+          resume_record: resumeRecord, // Include resume record if created
+          upload_result: uploadResult, // Include upload result if successful
           extraction_summary: {
             work_experiences_count: extractedData.work_experiences.length,
             educations_count: extractedData.educations.length,

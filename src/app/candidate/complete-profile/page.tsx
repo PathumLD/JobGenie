@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { FormSelect } from '@/components/ui/form-select';
+import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
 
 interface CandidateData {
   first_name: string | null;
@@ -30,6 +31,14 @@ interface FormData {
 }
 
 export default function CompleteProfilePage() {
+  return (
+    <CandidateAuthGuard>
+      <CompleteProfileContent />
+    </CandidateAuthGuard>
+  );
+}
+
+function CompleteProfileContent() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);

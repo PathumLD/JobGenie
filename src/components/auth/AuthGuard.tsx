@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { tokenStorage } from '@/lib/auth-storage';
 
 interface AuthGuardProps {
@@ -16,6 +16,7 @@ export function AuthGuard({
   requiredRole = []
 }: AuthGuardProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -29,6 +30,43 @@ export function AuthGuard({
           console.log('No access token found, redirecting to login');
           router.push(redirectTo);
           return;
+        }
+
+        // For candidate routes, check profile approval status
+        if (pathname.startsWith('/candidate') && 
+            !pathname.includes('/login') && 
+            !pathname.includes('/register') && 
+            !pathname.includes('/complete-profile')) {
+          
+          try {
+            const response = await fetch('/api/candidate/profile/profile-approval-check', {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                // If profile is incomplete, redirect to complete profile page
+                if (!data.isProfileComplete) {
+                  router.push('/candidate/complete-profile');
+                  return;
+                }
+                
+                // If profile is complete but not approved, allow access to the platform
+                // They can browse jobs and update profile, but cannot apply until approved
+                if (data.isProfileComplete && data.approval_status === 'pending') {
+                  console.log('Profile complete but pending MIS approval - allowing access to platform');
+                  // Don't redirect, allow normal access
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error checking profile approval status:', error);
+            // Continue with normal auth check if profile check fails
+          }
         }
 
         // TODO: Optionally verify token with server and check role
@@ -45,7 +83,7 @@ export function AuthGuard({
     };
 
     checkAuth();
-  }, [router, redirectTo]);
+  }, [router, redirectTo, pathname]);
 
   if (isChecking) {
     return (

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { authenticatedFetch, debugAuthStatus, refreshTokenFromStorage } from '@/lib/auth-storage';
+import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
 
 import { toast } from 'sonner';
 
@@ -178,6 +179,8 @@ interface ExtractionResponse {
       type: string;
     };
     resumeFile: string; // Base64 encoded resume file
+    resume_record?: Record<string, unknown>; // Resume record if created
+    upload_result?: Record<string, unknown>; // Upload result if successful
     extraction_summary: {
       work_experiences_count: number;
       educations_count: number;
@@ -202,13 +205,71 @@ interface ExtractionSummary {
   awards_count?: number;
 }
 
+interface ProfileSection {
+  id: string;
+  title: string;
+  data: {
+    type: string;
+    completedProfile?: boolean;
+    [key: string]: unknown;
+  };
+  order: number;
+}
+
 export default function CVExtractionPage() {
+  return (
+    <CandidateAuthGuard>
+      <CVExtractionContent />
+    </CandidateAuthGuard>
+  );
+}
+
+function CVExtractionContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [extractionSummary, setExtractionSummary] = useState<ExtractionSummary | null>(null);
+  const [isCheckingResumes, setIsCheckingResumes] = useState(true);
+  const [hasResumes, setHasResumes] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if user already has resumes
+  useEffect(() => {
+    checkExistingResumes();
+  }, []);
+
+  const checkExistingResumes = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (resumeCheckResponse.ok) {
+          const resumeData = await resumeCheckResponse.json();
+          if (resumeData.success) {
+            setHasResumes(resumeData.hasResumes);
+            if (resumeData.hasResumes) {
+              // User already has resumes, redirect to jobs page
+              console.log('User already has resumes, redirecting to jobs page');
+              setTimeout(() => {
+                window.location.href = '/candidate/jobs';
+              }, 2000);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking existing resumes:', error);
+    } finally {
+      setIsCheckingResumes(false);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -226,7 +287,7 @@ export default function CVExtractionPage() {
     }
   };
 
-  const handleExtractCV = async () => {
+    const handleExtractCV = async () => {
     if (!selectedFile) {
       setError('Please select a file first');
       return;
@@ -249,7 +310,7 @@ export default function CVExtractionPage() {
       
       console.log('✅ Token refreshed, proceeding with API calls...');
       
-      // First check if user has an existing profile
+      // First check if user has an existing profile and check completedProfile status
       const profileCheckResponse = await authenticatedFetch('/api/candidate/profile/current', {
         method: 'GET',
       });
@@ -265,10 +326,17 @@ export default function CVExtractionPage() {
         throw new Error(errorData.error || 'Failed to check profile status');
       }
 
-      const hasExistingProfile = profileCheckResponse.ok;
+      // Get profile data to check completedProfile status
+      const profileData = await profileCheckResponse.json();
+      const basicInfoSection = profileData.data?.sections?.find(
+        (section: ProfileSection) => section.data.type === 'basic_info'
+      );
+      const completedProfile = basicInfoSection?.data?.completedProfile;
 
-      if (hasExistingProfile) {
-        // User has existing profile, use merge API
+      if (completedProfile === true) {
+        // User has completed profile, use merge API to add new CV data
+        console.log('✅ User has completed profile, merging CV data...');
+        
         const formData = new FormData();
         formData.append('file', selectedFile);
 
@@ -287,19 +355,20 @@ export default function CVExtractionPage() {
         if (result.success) {
           toast.success('CV processed successfully! Your profile has been updated with new information.');
           
-          // Redirect to upload CV page to show detailed results
+          // Dispatch custom event to notify header to refresh resume status
+          window.dispatchEvent(new CustomEvent('resume-uploaded'));
+          
+          // Redirect to view profile since they already have a completed profile
           setTimeout(() => {
-            if (window.confirm('CV processed successfully! Your profile has been updated. Would you like to view your profile now?')) {
-              window.location.href = '/candidate/view-profile';
-            } else {
-              window.location.href = '/candidate/upload-cv';
-            }
+            window.location.href = '/candidate/view-profile';
           }, 1000);
         } else {
           throw new Error(result.message || 'Processing failed');
         }
       } else {
-        // User doesn't have profile, use extraction API for new profile creation
+        // User doesn't have completed profile (first time), use extraction API for new profile creation
+        console.log('✅ User is uploading CV for first time, extracting data for profile creation...');
+        
         const formData = new FormData();
         formData.append('file', selectedFile);
 
@@ -308,16 +377,16 @@ export default function CVExtractionPage() {
           body: formData,
         });
 
-              if (!response.ok) {
-        if (response.status === 401) {
-          console.log('❌ Authentication failed during CV extraction');
-          debugAuthStatus();
-          throw new Error('Authentication failed. Please login again.');
+        if (!response.ok) {
+          if (response.status === 401) {
+            console.log('❌ Authentication failed during CV extraction');
+            debugAuthStatus();
+            throw new Error('Authentication failed. Please login again.');
+          }
+          
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to extract CV data');
         }
-        
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to extract CV data');
-      }
 
         const result: ExtractionResponse = await response.json();
         
@@ -332,13 +401,19 @@ export default function CVExtractionPage() {
           };
           localStorage.setItem('cv_extraction_data', JSON.stringify(dataToStore));
           
-          toast.success('CV data extracted successfully! You can now create your profile.');
+          // Check if resume was uploaded successfully
+          if (result.data.resume_record && result.data.upload_result) {
+            toast.success('CV data extracted and resume uploaded successfully! You can now create your profile.');
+            
+            // Dispatch custom event to notify header to refresh resume status
+            window.dispatchEvent(new CustomEvent('resume-uploaded'));
+          } else {
+            toast.success('CV data extracted successfully! You can now create your profile.');
+          }
           
-          // Show success message with option to create profile
+          // Since this is first time, redirect to create-profile page
           setTimeout(() => {
-            if (window.confirm('CV data extracted successfully! Would you like to go to the Create Profile page now?')) {
-              window.location.href = '/candidate/create-profile';
-            }
+            window.location.href = '/candidate/create-profile';
           }, 1000);
         } else {
           throw new Error(result.message || 'Extraction failed');
@@ -357,6 +432,40 @@ export default function CVExtractionPage() {
     window.location.href = '/candidate/create-profile';
   };
 
+  const handleCreateProfile = async () => {
+    try {
+      // Check completedProfile status and redirect accordingly
+      const profileResponse = await authenticatedFetch('/api/candidate/profile/current', {
+        method: 'GET',
+      });
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        // Find the basic_info section which contains the completedProfile field
+        const basicInfoSection = profileData.data?.sections?.find(
+          (section: ProfileSection) => section.data.type === 'basic_info'
+        );
+        const completedProfile = basicInfoSection?.data?.completedProfile;
+        
+        // Redirect based on completedProfile status
+        if (completedProfile === true) {
+          // Profile is completed, redirect to view-profile
+          window.location.href = '/candidate/view-profile';
+        } else {
+          // Profile is not completed, redirect to create-profile
+          window.location.href = '/candidate/create-profile';
+        }
+      } else {
+        // If profile check fails, default to create-profile
+        window.location.href = '/candidate/create-profile';
+      }
+    } catch (profileError) {
+      console.error('Error checking profile completion status:', profileError);
+      // If profile check fails, default to create-profile
+      window.location.href = '/candidate/create-profile';
+    }
+  };
+
   const resetForm = () => {
     setSelectedFile(null);
     setExtractedData(null);
@@ -366,6 +475,36 @@ export default function CVExtractionPage() {
       fileInputRef.current.value = '';
     }
   };
+
+  // Show loading state while checking resumes
+  if (isCheckingResumes) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="ml-3 text-gray-600">Checking resume status...</p>
+      </div>
+    );
+  }
+
+  // Show redirect message if user already has resumes
+  if (hasResumes) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">You already have resumes!</h3>
+          <p className="text-gray-600 mb-4">
+            Redirecting you to the jobs page since you already have resumes uploaded.
+          </p>
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -384,45 +523,6 @@ export default function CVExtractionPage() {
         <CardHeader>
           <CardTitle className="text-lg">Upload CV</CardTitle>
           
-          {/* Debug Authentication Button */}
-          <div className="mt-2 flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                console.log('🔍 Manual auth check triggered');
-                debugAuthStatus();
-                if (refreshTokenFromStorage()) {
-                  toast.success('Token refreshed successfully!');
-                } else {
-                  toast.error('Failed to refresh token');
-                }
-              }}
-              className="text-xs"
-            >
-              🔍 Check Auth Status
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const token = localStorage.getItem('access_token');
-                if (token) {
-                  console.log('🔑 Current token in localStorage:', token);
-                  console.log('🔑 Token length:', token.length);
-                  console.log('🔑 Token preview:', token.substring(0, 50) + '...');
-                  toast.success(`Token found: ${token.length} chars`);
-                } else {
-                  console.log('❌ No token in localStorage');
-                  toast.error('No token found in localStorage');
-                }
-              }}
-              className="text-xs"
-            >
-              🔑 Show Token
-            </Button>
-          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
@@ -811,7 +911,7 @@ export default function CVExtractionPage() {
               Save to Profile
             </Button>
             <Button 
-              onClick={() => window.location.href = '/candidate/create-profile'}
+              onClick={handleCreateProfile}
               className="bg-blue-600 hover:bg-blue-700"
             >
               Create Profile

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
     }
 
     // Determine user type and get profile
-    let userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+    let userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency' = 'candidate';
     let profile: typeof user.candidate | typeof user.employer | null = null;
 
     if (user.role === 'candidate' && user.candidate) {
@@ -129,7 +129,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
 
     const accessToken = generateAccessToken(jwtPayload);
 
-    // Debug: Log JWT token
+    // Debug: Log JWT token and payload
+    console.log('🔑 JWT Payload generated:');
+    console.log('👤 User ID:', jwtPayload.userId);
+    console.log('📧 Email:', jwtPayload.email);
+    console.log('🎭 Role:', jwtPayload.role);
+    console.log('🏷️ User Type:', jwtPayload.userType);
+    console.log('🔢 Membership No:', jwtPayload.membership_no);
     console.log('Generated JWT token:');
     console.log('Access Token:', accessToken);
 

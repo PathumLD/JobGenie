@@ -15,9 +15,16 @@ interface CandidateHeaderProps {
 export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHeaderProps) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [hasResumes, setHasResumes] = useState<boolean | null>(null);
+  const [isCheckingResumes, setIsCheckingResumes] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Check resume existence on component mount
+  useEffect(() => {
+    checkResumeExistence();
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -32,6 +39,54 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const checkResumeExistence = async () => {
+    try {
+      setIsCheckingResumes(true);
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (resumeCheckResponse.ok) {
+          const resumeData = await resumeCheckResponse.json();
+          if (resumeData.success) {
+            setHasResumes(resumeData.hasResumes);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking resume existence:', error);
+    } finally {
+      setIsCheckingResumes(false);
+    }
+  };
+
+  // Refresh resume status when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkResumeExistence();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Listen for resume upload events to refresh status
+  useEffect(() => {
+    const handleResumeUpload = () => {
+      checkResumeExistence();
+    };
+
+    window.addEventListener('resume-uploaded', handleResumeUpload);
+    return () => window.removeEventListener('resume-uploaded', handleResumeUpload);
   }, []);
 
   const handleLogout = async () => {
@@ -104,15 +159,33 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
 
         {/* Right side - Actions and Profile */}
         <div className="flex items-center space-x-4">
-          {/* Upload CV Button */}
-          <Link href="/candidate/cv-extraction">
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          {/* Dynamic CV Upload Button */}
+          {isCheckingResumes ? (
+            <Button disabled className="bg-gray-400 cursor-not-allowed text-white">
+              <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Upload CV
+              Checking...
             </Button>
-          </Link>
+          ) : hasResumes ? (
+            <Link href="/candidate/upload-cv">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Upload New CV
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/candidate/cv-extraction">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Upload CV
+              </Button>
+            </Link>
+          )}
 
           {/* Notifications */}
           <div className="relative" ref={notificationsRef}>
@@ -129,7 +202,7 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <Card className="absolute right-0 mt-2 w-80 shadow-xl border-0">
+              <Card className="absolute z-50 bg-white right-0 mt-2 w-80 shadow-xl border-0">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900">Notifications</h3>
@@ -189,9 +262,9 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
               </svg>
             </button>
 
-            {/* Profile Dropdown */}
+            {/* Profile Dropdown */}  
             {showProfileDropdown && (
-              <Card className="absolute right-0 mt-2 w-48 shadow-xl border-0">
+              <Card className="absolute z-50 bg-white right-0 mt-2 w-48 shadow-xl border-0">
                 <CardContent className="p-2">
                   <div className="space-y-1">
                     <Link

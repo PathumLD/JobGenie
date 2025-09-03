@@ -1,38 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
+import { 
+  ProfileApprovalResponse, 
+  ProfileApprovalErrorResponse 
+} from '@/types/profile-approval';
 
 const prisma = new PrismaClient();
 
 // Force Node.js runtime for this API route
 export const runtime = 'nodejs';
 
-interface ProfileCompletionResponse {
-  success: boolean;
-  isProfileComplete: boolean;
-  missingFields: string[];
-  candidateData?: {
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-    nic: string | null;
-    gender: string | null;
-    date_of_birth: Date | null;
-    address: string | null;
-    phone: string | null;
-  };
-  message: string;
-}
-
-interface ProfileCompletionErrorResponse {
-  success: false;
-  error: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'INTERNAL_SERVER_ERROR';
-  message: string;
-}
-
 export async function GET(
   request: NextRequest
-): Promise<NextResponse<ProfileCompletionResponse | ProfileCompletionErrorResponse>> {
+): Promise<NextResponse<ProfileApprovalResponse | ProfileApprovalErrorResponse>> {
   try {
     const token = getTokenFromHeaders(request);
     
@@ -42,7 +23,7 @@ export async function GET(
           success: false,
           error: 'UNAUTHORIZED',
           message: 'Authentication token required'
-        } as ProfileCompletionErrorResponse,
+        } as ProfileApprovalErrorResponse,
         { status: 401 }
       );
     }
@@ -55,7 +36,7 @@ export async function GET(
           success: false,
           error: 'UNAUTHORIZED',
           message: 'Invalid authentication token'
-        } as ProfileCompletionErrorResponse,
+        } as ProfileApprovalErrorResponse,
         { status: 401 }
       );
     }
@@ -79,12 +60,12 @@ export async function GET(
           success: false,
           error: 'NOT_FOUND',
           message: 'User not found'
-        } as ProfileCompletionErrorResponse,
+        } as ProfileApprovalErrorResponse,
         { status: 404 }
       );
     }
 
-    // Get candidate profile data
+    // Get candidate profile data including approval status
     const candidate = await prisma.candidate.findFirst({
       where: { user_id: userId },
       select: {
@@ -94,9 +75,21 @@ export async function GET(
         gender: true,
         date_of_birth: true,
         address: true,
-        phone1: true
+        phone1: true,
+        approval_status: true
       }
     });
+
+    if (!candidate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Candidate profile not found',
+        } as ProfileApprovalErrorResponse,
+        { status: 404 }
+      );
+    }
 
     // Required fields for profile completion
     const requiredFields = [
@@ -118,12 +111,14 @@ export async function GET(
       }
     });
 
+    // Check if profile is complete based only on required fields
+    const isProfileComplete = missingFields.length === 0;
+    const approval_status = candidate.approval_status || 'pending';
+
     console.log('🔍 Profile completion check for user:', userId);
     console.log('📊 Required fields check:', requiredFields.map(f => ({ field: f.field, value: f.value, label: f.label })));
     console.log('❌ Missing fields:', missingFields);
-
-    // Check if profile is complete based only on required fields
-    const isProfileComplete = missingFields.length === 0;
+    console.log('✅ Approval status:', approval_status);
 
     // Prepare candidate data for pre-filling form
     const candidateData = {
@@ -137,15 +132,26 @@ export async function GET(
       phone: candidate?.phone1 ?? null
     };
 
+    // Determine message based on status
+    let message = '';
+    if (!isProfileComplete) {
+      message = `Profile incomplete. Missing: ${missingFields.join(', ')}`;
+    } else if (approval_status === 'pending') {
+      message = 'Profile complete but pending MIS approval';
+    } else if (approval_status === 'rejected') {
+      message = 'Profile complete but rejected by MIS';
+    } else {
+      message = 'Profile complete and approved';
+    }
+
     return NextResponse.json({
       success: true,
       isProfileComplete,
+      approval_status,
       missingFields,
       candidateData,
-      message: isProfileComplete 
-        ? 'Profile is complete' 
-        : `Profile incomplete. Missing: ${missingFields.join(', ')}`
-    } as ProfileCompletionResponse);
+      message
+    } as ProfileApprovalResponse);
 
   } catch (error) {
     console.error('Error checking profile completion:', error);
@@ -155,7 +161,7 @@ export async function GET(
         success: false,
         error: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to check profile completion'
-      } as ProfileCompletionErrorResponse,
+      } as ProfileApprovalErrorResponse,
       { status: 500 }
     );
   } finally {

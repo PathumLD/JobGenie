@@ -77,7 +77,7 @@ export interface Candidate {
   pre_qualified?: boolean | null;
   profile_completion_percentage?: number | null;
   completedProfile?: boolean | null;
-  isApproved?: boolean | null;
+  approval_status?: 'pending' | 'approved' | 'rejected' | null;
   saved_job: string[];
   saved_jobs_metadata?: Record<string, unknown> | null;
   created_at?: Date | null;

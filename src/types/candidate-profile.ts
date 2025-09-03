@@ -55,7 +55,7 @@ export interface BasicInfoSection {
   pre_qualified?: boolean | null;
   profile_completion_percentage?: number | null;
   completedProfile?: boolean | null;
-  isApproved?: boolean | null;
+  approval_status?: 'pending' | 'approved' | 'rejected' | null;
   // Additional fields from create-profile BasicInfo interface
   date_of_birth?: Date | null;
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
@@ -265,7 +265,7 @@ export interface CandidateProfileResponse {
       total_certificates: number;
       total_skills: number;
       profile_completion_percentage: number;
-      is_approved: boolean;
+      approval_status: 'pending' | 'approved' | 'rejected';
     };
   };
 }

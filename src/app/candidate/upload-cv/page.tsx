@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Plus, Minus } from 'lucide-react';
 import { authenticatedFetch } from '@/lib/auth-storage';
+import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
 
 interface MergeResults {
   basic_info_updated: boolean;
@@ -53,10 +54,20 @@ interface MergeResponse {
     file_info: FileInfo;
     merge_results: MergeResults;
     extracted_summary: ExtractedSummary;
+    resume_record?: any; // Resume record if created
+    upload_result?: any; // Upload result if successful
   };
 }
 
 export default function UploadCVPage() {
+  return (
+    <CandidateAuthGuard>
+      <UploadCVContent />
+    </CandidateAuthGuard>
+  );
+}
+
+function UploadCVContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +126,15 @@ export default function UploadCVPage() {
         setExtractedSummary(result.data.extracted_summary);
         setFileInfo(result.data.file_info);
         
-        toast.success('CV processed successfully! Your profile has been updated with new information.');
+        // Check if resume was uploaded successfully
+        if (result.data.resume_record && result.data.upload_result) {
+          toast.success('CV processed and resume uploaded successfully! Your profile has been updated with new information.');
+          
+          // Dispatch custom event to notify header to refresh resume status
+          window.dispatchEvent(new CustomEvent('resume-uploaded'));
+        } else {
+          toast.success('CV processed successfully! Your profile has been updated with new information.');
+        }
       } else {
         throw new Error(result.message || 'Upload failed');
       }
@@ -370,6 +389,21 @@ export default function UploadCVPage() {
               </div>
 
             </div>
+
+            {/* Resume Upload Status */}
+            {mergeResults && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <div>
+                    <h4 className="font-medium text-green-800">CV Processed Successfully</h4>
+                    <p className="text-sm text-green-600 mt-1">
+                      Your CV has been processed and new information has been added to your profile.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4">

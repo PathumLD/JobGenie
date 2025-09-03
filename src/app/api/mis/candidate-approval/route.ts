@@ -1,53 +1,166 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
+import type { 
+  ApproveCandidateRequest, 
+  CandidateApprovalResponse, 
+  ApiErrorResponse 
+} from '@/types/profile-approval';
+import { sendProfileApprovalEmail, sendProfileRejectionEmail } from '@/lib/candidate-notifications';
 
 const prisma = new PrismaClient();
 
-// Type definitions for the API
-interface ApproveCandidateRequest {
-  candidateId: string;
-}
+// Validation schema for single candidate approval
+const approveCandidateSchema = z.object({
+  candidateId: z.string().uuid('Invalid candidate ID format')
+});
 
-interface CandidateApprovalResponse {
-  message: string;
-  candidate: {
-    user_id: string;
-    first_name: string | null;
-    last_name: string | null;
-    status: string;
-    updated_at: Date | null;
-  };
-}
+// Validation schema for bulk candidate approval
+const bulkApproveCandidatesSchema = z.object({
+  candidateIds: z.array(z.string().uuid('Invalid candidate ID format')).min(1, 'At least one candidate ID is required')
+});
 
-interface CandidateStatusResponse {
-  candidate: {
-    user_id: string;
-    first_name: string | null;
-    last_name: string | null;
-    status: string;
-    created_at: Date | null;
-    updated_at: Date | null;
-  };
-}
+// Validation schema for query parameters
+const querySchema = z.object({
+  action: z.enum(['approve', 'reject', 'bulk-approve']).optional(),
+  candidateId: z.string().uuid('Invalid candidate ID format').optional()
+});
 
-interface ApiErrorResponse {
-  error: string;
-}
-
-export async function PUT(request: NextRequest): Promise<NextResponse<CandidateApprovalResponse | ApiErrorResponse>> {
+export async function POST(request: NextRequest): Promise<NextResponse<CandidateApprovalResponse | ApiErrorResponse>> {
   try {
-    const body: ApproveCandidateRequest = await request.json();
-
-    if (!body.candidateId) {
+    const body = await request.json();
+    const { searchParams } = new URL(request.url);
+    
+    // Parse and validate query parameters
+    const queryValidation = querySchema.safeParse(Object.fromEntries(searchParams));
+    if (!queryValidation.success) {
       return NextResponse.json(
-        { error: 'Candidate ID is required' },
+        {
+          error: 'Invalid query parameters',
+          details: queryValidation.error.issues.map(issue => ({
+            code: issue.code,
+            message: issue.message,
+            path: issue.path
+          }))
+        },
         { status: 400 }
       );
     }
 
+    const { action } = queryValidation.data;
+
+    // Handle bulk approval
+    if (action === 'bulk-approve') {
+      const bulkValidation = bulkApproveCandidatesSchema.safeParse(body);
+      if (!bulkValidation.success) {
+        return NextResponse.json(
+          {
+            error: 'Validation failed',
+            details: bulkValidation.error.issues.map(issue => ({
+              code: issue.code,
+              message: issue.message,
+              path: issue.path
+            }))
+          },
+          { status: 400 }
+        );
+      }
+
+                  const { candidateIds } = bulkValidation.data;
+
+            // Update all candidates in a transaction
+            const updatedCandidates = await prisma.$transaction(async (tx) => {
+              const results = [];
+              
+              for (const candidateId of candidateIds) {
+                const candidate = await tx.candidate.update({
+                  where: { user_id: candidateId },
+                  data: { 
+                    approval_status: 'approved',
+                    updated_at: new Date()
+                  },
+                  include: {
+                    user: {
+                      select: {
+                        first_name: true,
+                        last_name: true,
+                        email: true
+                      }
+                    }
+                  }
+                });
+
+                                 // Also update user status to active if candidate is approved
+                 await tx.user.update({
+                   where: { id: candidateId },
+                   data: { 
+                     status: 'active',
+                     updated_at: new Date()
+                   }
+                 });
+
+                 // Send approval email notification
+                 try {
+                   await sendProfileApprovalEmail(
+                     candidate.user.email,
+                     candidate.first_name || undefined
+                   );
+                 } catch (emailError) {
+                   console.error('Failed to send approval email:', emailError);
+                   // Don't fail the transaction if email fails
+                 }
+
+                 results.push(candidate);
+               }
+               
+               return results;
+             });
+
+            return NextResponse.json({
+              message: `Successfully approved ${updatedCandidates.length} candidates`,
+              candidate: {
+                user_id: updatedCandidates[0].user_id,
+                first_name: updatedCandidates[0].first_name,
+                last_name: updatedCandidates[0].last_name,
+                approval_status: updatedCandidates[0].approval_status,
+                updated_at: updatedCandidates[0].updated_at
+              }
+            });
+    }
+
+    // Handle single candidate approval/rejection
+    const validation = approveCandidateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: validation.error.issues.map(issue => ({
+            code: issue.code,
+            message: issue.message,
+            path: issue.path
+          }))
+        },
+        { status: 400 }
+      );
+    }
+
+    const { candidateId } = validation.data;
+    const isApproving = action === 'approve' || !action; // Default to approve if no action specified
+
     // Check if candidate exists
     const existingCandidate = await prisma.candidate.findUnique({
-      where: { user_id: body.candidateId }
+      where: { user_id: candidateId },
+      include: {
+        user: {
+          select: {
+            first_name: true,
+            last_name: true,
+            email: true,
+            status: true,
+            role: true
+          }
+        }
+      }
     });
 
     if (!existingCandidate) {
@@ -57,59 +170,84 @@ export async function PUT(request: NextRequest): Promise<NextResponse<CandidateA
       );
     }
 
-    // Check if already approved by looking at user status
-    const user = await prisma.user.findUnique({
-      where: { id: body.candidateId }
-    });
-
-    if (user?.status === 'active') {
+    // Verify the user is actually a candidate
+    if (existingCandidate.user.role !== 'candidate') {
       return NextResponse.json(
-        { error: 'Candidate is already approved' },
+        { error: 'Invalid user type. Only candidates can be approved.' },
         { status: 400 }
       );
     }
 
-    // Update the user status to active (approve the candidate)
-    const updatedUser = await prisma.user.update({
-      where: { id: body.candidateId },
+                // Update candidate approval status
+            const updatedCandidate = await prisma.candidate.update({
+              where: { user_id: candidateId },
+              data: { 
+                approval_status: isApproving ? 'approved' : 'rejected',
+                updated_at: new Date()
+              },
+              include: {
+                user: {
+                  select: {
+                    first_name: true,
+                    last_name: true,
+                    email: true,
+                    status: true
+                  }
+                }
+              }
+            });
+
+    // Update user status based on approval
+    const newUserStatus = isApproving ? 'active' : 'pending_verification';
+    await prisma.user.update({
+      where: { id: candidateId },
       data: { 
-        status: 'active'
-      },
-      select: {
-        id: true,
-        status: true,
-        updated_at: true
+        status: newUserStatus,
+        updated_at: new Date()
       }
     });
 
-    // Get candidate info for response
-    const candidateInfo = await prisma.candidate.findUnique({
-      where: { user_id: body.candidateId },
-      select: {
-        user_id: true,
-        first_name: true,
-        last_name: true,
-        updated_at: true
+    // Send email notification based on action
+    try {
+      if (isApproving) {
+        await sendProfileApprovalEmail(
+          updatedCandidate.user.email,
+          updatedCandidate.first_name || undefined
+        );
+      } else {
+        await sendProfileRejectionEmail(
+          updatedCandidate.user.email,
+          updatedCandidate.first_name || undefined
+        );
       }
-    });
+    } catch (emailError) {
+      console.error('Failed to send email notification:', emailError);
+      // Don't fail the request if email fails
+    }
 
-    if (!candidateInfo) {
+    const actionText = isApproving ? 'approved' : 'rejected';
+    
+                return NextResponse.json({
+              message: `Candidate ${actionText} successfully`,
+              candidate: {
+                user_id: updatedCandidate.user_id,
+                first_name: updatedCandidate.first_name,
+                last_name: updatedCandidate.last_name,
+                approval_status: updatedCandidate.approval_status,
+                updated_at: updatedCandidate.updated_at
+              }
+            });
+
+  } catch (error) {
+    console.error('Candidate approval error:', error);
+
+    if (error instanceof Error) {
       return NextResponse.json(
-        { error: 'Candidate info not found' },
-        { status: 404 }
+        { error: 'Internal server error', message: error.message },
+        { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      message: 'Candidate profile approved successfully',
-      candidate: {
-        ...candidateInfo,
-        status: updatedUser.status || 'active'
-      }
-    });
-
-  } catch (error) {
-    console.error('Error approving candidate:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -119,7 +257,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse<CandidateA
   }
 }
 
-export async function GET(request: NextRequest): Promise<NextResponse<CandidateStatusResponse | ApiErrorResponse>> {
+// GET endpoint to retrieve candidate approval status
+export async function GET(request: NextRequest): Promise<NextResponse<CandidateApprovalResponse | ApiErrorResponse>> {
   try {
     const { searchParams } = new URL(request.url);
     const candidateId = searchParams.get('candidateId');
@@ -131,51 +270,58 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateS
       );
     }
 
-    // Get candidate approval status by checking user status
-    const user = await prisma.user.findUnique({
-      where: { id: candidateId },
-      select: {
-        id: true,
-        status: true,
-        created_at: true,
-        updated_at: true
+    // Validate candidate ID format
+    const validation = z.string().uuid('Invalid candidate ID format').safeParse(candidateId);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid candidate ID format' },
+        { status: 400 }
+      );
+    }
+
+    // Find candidate
+    const candidate = await prisma.candidate.findUnique({
+      where: { user_id: candidateId },
+      include: {
+        user: {
+          select: {
+            first_name: true,
+            last_name: true,
+            email: true,
+            status: true
+          }
+        }
       }
     });
 
-    if (!user) {
+    if (!candidate) {
       return NextResponse.json(
         { error: 'Candidate not found' },
         { status: 404 }
       );
     }
 
-    const candidate = await prisma.candidate.findUnique({
-      where: { user_id: candidateId },
-      select: {
-        user_id: true,
-        first_name: true,
-        last_name: true,
-        created_at: true,
-        updated_at: true
-      }
-    });
+                return NextResponse.json({
+              message: 'Candidate status retrieved successfully',
+              candidate: {
+                user_id: candidate.user_id,
+                first_name: candidate.first_name,
+                last_name: candidate.last_name,
+                approval_status: candidate.approval_status,
+                updated_at: candidate.updated_at
+              }
+            });
 
-    if (!candidate) {
+  } catch (error) {
+    console.error('Get candidate status error:', error);
+
+    if (error instanceof Error) {
       return NextResponse.json(
-        { error: 'Candidate profile not found' },
-        { status: 404 }
+        { error: 'Internal server error', message: error.message },
+        { status: 500 }
       );
     }
 
-    return NextResponse.json({ 
-      candidate: {
-        ...candidate,
-        status: user.status || 'pending_verification'
-      }
-    });
-
-  } catch (error) {
-    console.error('Error fetching candidate approval status:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

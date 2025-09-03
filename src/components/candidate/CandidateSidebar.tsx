@@ -82,7 +82,7 @@ export function CandidateSidebar({ expanded }: Readonly<CandidateSidebarProps>) 
       children: [
         { label: 'Personal Info', href: '/candidate/view-profile', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Skills & Experience', href: '/candidate/skills', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
-        { label: 'Resume & Documents', href: '/candidate/documents', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
+        { label: 'Resume & Documents', href: '/candidate/resume-management', icon: <span className="w-2 h-2 bg-purple-400 rounded-full" /> },
         { label: 'Preferences', href: '/candidate/preferences', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> }
       ]
     },
@@ -97,6 +97,7 @@ export function CandidateSidebar({ expanded }: Readonly<CandidateSidebarProps>) 
       children: [
         { label: 'Resume Builder', href: '/candidate/resume-builder', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Upload CV', href: '/candidate/upload-cv', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
+        { label: 'Resume Management', href: '/candidate/resume-management', icon: <span className="w-2 h-2 bg-purple-400 rounded-full" /> },
         { label: 'CV Extraction', href: '/candidate/cv-extraction', icon: <span className="w-2 h-2 bg-blue-400 rounded-full" /> },
         { label: 'Cover Letter', href: '/candidate/cover-letter', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Interview Prep', href: '/candidate/interview-prep', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },

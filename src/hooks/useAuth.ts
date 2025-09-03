@@ -16,6 +16,7 @@ export const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [token, setToken] = useState<string | null>(null);
 
   // Check authentication status on mount and when localStorage changes
   useEffect(() => {
@@ -32,6 +33,10 @@ export const useAuth = () => {
       setIsAuthenticated(authenticated);
       
       if (authenticated) {
+        // Get the access token
+        const accessToken = tokenStorage.getAccessToken();
+        setToken(accessToken);
+        
         // TODO: Optionally fetch user profile from API
         // For now, we'll set a basic user object
         setUser({
@@ -44,6 +49,7 @@ export const useAuth = () => {
         });
       } else {
         setUser(null);
+        setToken(null);
       }
       
       setIsLoading(false);
@@ -67,6 +73,7 @@ export const useAuth = () => {
 
   const login = (accessToken: string, userData?: User) => {
     tokenStorage.setAccessToken(accessToken);
+    setToken(accessToken);
     setIsAuthenticated(true);
     if (userData) {
       setUser(userData);
@@ -75,6 +82,7 @@ export const useAuth = () => {
 
   const logout = () => {
     tokenStorage.clearAccessToken();
+    setToken(null);
     setIsAuthenticated(false);
     setUser(null);
   };
@@ -83,6 +91,7 @@ export const useAuth = () => {
     isAuthenticated,
     user,
     isLoading,
+    token,
     login,
     logout
   };

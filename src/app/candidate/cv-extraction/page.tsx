@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
@@ -230,7 +230,46 @@ function CVExtractionContent() {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [extractionSummary, setExtractionSummary] = useState<ExtractionSummary | null>(null);
+  const [isCheckingResumes, setIsCheckingResumes] = useState(true);
+  const [hasResumes, setHasResumes] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if user already has resumes
+  useEffect(() => {
+    checkExistingResumes();
+  }, []);
+
+  const checkExistingResumes = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (resumeCheckResponse.ok) {
+          const resumeData = await resumeCheckResponse.json();
+          if (resumeData.success) {
+            setHasResumes(resumeData.hasResumes);
+            if (resumeData.hasResumes) {
+              // User already has resumes, redirect to jobs page
+              console.log('User already has resumes, redirecting to jobs page');
+              setTimeout(() => {
+                window.location.href = '/candidate/jobs';
+              }, 2000);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking existing resumes:', error);
+    } finally {
+      setIsCheckingResumes(false);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -316,6 +355,9 @@ function CVExtractionContent() {
         if (result.success) {
           toast.success('CV processed successfully! Your profile has been updated with new information.');
           
+          // Dispatch custom event to notify header to refresh resume status
+          window.dispatchEvent(new CustomEvent('resume-uploaded'));
+          
           // Redirect to view profile since they already have a completed profile
           setTimeout(() => {
             window.location.href = '/candidate/view-profile';
@@ -362,6 +404,9 @@ function CVExtractionContent() {
           // Check if resume was uploaded successfully
           if (result.data.resume_record && result.data.upload_result) {
             toast.success('CV data extracted and resume uploaded successfully! You can now create your profile.');
+            
+            // Dispatch custom event to notify header to refresh resume status
+            window.dispatchEvent(new CustomEvent('resume-uploaded'));
           } else {
             toast.success('CV data extracted successfully! You can now create your profile.');
           }
@@ -430,6 +475,36 @@ function CVExtractionContent() {
       fileInputRef.current.value = '';
     }
   };
+
+  // Show loading state while checking resumes
+  if (isCheckingResumes) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="ml-3 text-gray-600">Checking resume status...</p>
+      </div>
+    );
+  }
+
+  // Show redirect message if user already has resumes
+  if (hasResumes) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">You already have resumes!</h3>
+          <p className="text-gray-600 mb-4">
+            Redirecting you to the jobs page since you already have resumes uploaded.
+          </p>
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -129,6 +129,9 @@ function UploadCVContent() {
         // Check if resume was uploaded successfully
         if (result.data.resume_record && result.data.upload_result) {
           toast.success('CV processed and resume uploaded successfully! Your profile has been updated with new information.');
+          
+          // Dispatch custom event to notify header to refresh resume status
+          window.dispatchEvent(new CustomEvent('resume-uploaded'));
         } else {
           toast.success('CV processed successfully! Your profile has been updated with new information.');
         }

@@ -33,6 +33,8 @@ export function CandidateDashboard() {
   const [profileStatus, setProfileStatus] = useState<ProfileApprovalStatus | null>(null);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [hasResumes, setHasResumes] = useState<boolean | null>(null);
+  const [isCheckingResumes, setIsCheckingResumes] = useState(false);
 
   useEffect(() => {
     checkProfileApprovalStatus();
@@ -81,11 +83,50 @@ export function CandidateDashboard() {
     }
   };
 
+  const checkResumeExistence = async () => {
+    try {
+      setIsCheckingResumes(true);
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (resumeCheckResponse.ok) {
+          const resumeData = await resumeCheckResponse.json();
+          if (resumeData.success) {
+            setHasResumes(resumeData.hasResumes);
+            if (!resumeData.hasResumes) {
+              // Candidate has no resumes, redirect to CV extraction page
+              console.log('No resumes found, redirecting to CV extraction page');
+              setTimeout(() => {
+                window.location.href = '/candidate/cv-extraction';
+              }, 2000);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking resume existence:', error);
+    } finally {
+      setIsCheckingResumes(false);
+    }
+  };
+
   useEffect(() => {
-    if (profileStatus?.isProfileComplete && profileStatus?.approval_status === 'approved') {
-      fetchJobs();
+    if (profileStatus?.isProfileComplete) {
+      checkResumeExistence();
     }
   }, [profileStatus]);
+
+  useEffect(() => {
+    if (hasResumes === true) {
+      fetchJobs();
+    }
+  }, [hasResumes]);
 
   const fetchJobs = async () => {
     try {
@@ -120,11 +161,13 @@ export function CandidateDashboard() {
     });
   };
 
-  if (isCheckingProfile) {
+  if (isCheckingProfile || isCheckingResumes) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="ml-3 text-gray-600">Checking profile status...</p>
+        <p className="ml-3 text-gray-600">
+          {isCheckingProfile ? 'Checking profile status...' : 'Checking resume status...'}
+        </p>
       </div>
     );
   }
@@ -175,6 +218,33 @@ export function CandidateDashboard() {
                 Your profile is complete but pending MIS approval. You can view your dashboard and update your profile, 
                 but you cannot apply for jobs until your profile is approved. Please wait for approval or contact support if you have questions.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CV Extraction Required Warning */}
+      {profileStatus?.isProfileComplete && hasResumes === false && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg shadow-sm p-6">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-blue-800">CV Required</h3>
+              <p className="text-blue-700 mt-1">
+                You need to upload your CV to complete your profile setup. You will be redirected to the CV extraction page in a few seconds.
+              </p>
+              <div className="mt-3">
+                <a 
+                  href="/candidate/cv-extraction" 
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Go to CV Extraction Now
+                </a>
+              </div>
             </div>
           </div>
         </div>

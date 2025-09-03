@@ -9,6 +9,7 @@ export default function CandidateJobsPage() {
   const [shouldHandleOAuth, setShouldHandleOAuth] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [hasResumes, setHasResumes] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +50,11 @@ export default function CandidateJobsPage() {
                 console.log('Profile complete but pending MIS approval');
                 // Don't redirect, just show the message on the page
               }
+              
+              // If profile is complete, check for resumes regardless of approval status
+              if (profileData.isProfileComplete) {
+                await checkResumeExistence();
+              }
             } else {
               console.error('Profile approval check failed:', profileData.message);
               // If check fails, assume profile is incomplete and redirect
@@ -75,6 +81,36 @@ export default function CandidateJobsPage() {
 
     checkProfileAndOAuth();
   }, []);
+
+  const checkResumeExistence = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (resumeCheckResponse.ok) {
+          const resumeData = await resumeCheckResponse.json();
+          if (resumeData.success) {
+            setHasResumes(resumeData.hasResumes);
+            if (!resumeData.hasResumes) {
+              // Candidate has no resumes, redirect to CV extraction page
+              console.log('No resumes found, redirecting to CV extraction page');
+              setTimeout(() => {
+                window.location.href = '/candidate/cv-extraction';
+              }, 2000);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking resume existence:', error);
+    }
+  };
 
   // Show loading state while checking profile
   if (isLoading) {
@@ -137,6 +173,35 @@ export default function CandidateJobsPage() {
                   Your profile is complete but pending MIS approval. You can view jobs and update your profile, 
                   but you cannot apply for jobs until your profile is approved. Please wait for approval or contact support if you have questions.
                 </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* CV Requirement Warning */}
+      {isProfileComplete && hasResumes === false && (
+        <Card className="bg-blue-50 border-blue-200 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-blue-800">CV Required</h3>
+                <p className="text-blue-700 mt-1">
+                  You need to upload your CV to complete your profile setup. You will be redirected to the CV extraction page in a few seconds.
+                </p>
+                <div className="mt-3">
+                  <a 
+                    href="/candidate/cv-extraction" 
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Go to CV Extraction Now
+                  </a>
+                </div>
               </div>
             </div>
           </CardContent>

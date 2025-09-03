@@ -63,6 +63,50 @@ export function CandidateLoginForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const checkResumeExistenceAndRedirect = async (accessToken: string) => {
+    try {
+      if (accessToken) {
+        const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (resumeCheckResponse.ok) {
+          const resumeData = await resumeCheckResponse.json();
+          if (resumeData.success) {
+            if (resumeData.hasResumes) {
+              // Candidate has resumes, redirect to jobs page
+              console.log('Candidate has resumes, redirecting to jobs page');
+              router.push('/candidate/jobs');
+            } else {
+              // Candidate has no resumes, redirect to CV extraction page
+              console.log('Candidate has no resumes, redirecting to CV extraction page');
+              router.push('/candidate/cv-extraction');
+            }
+          } else {
+            // If resume check fails, default to CV extraction page
+            console.log('Resume check failed, defaulting to CV extraction page');
+            router.push('/candidate/cv-extraction');
+          }
+        } else {
+          // If resume check fails, default to CV extraction page
+          console.log('Resume check failed, defaulting to CV extraction page');
+          router.push('/candidate/cv-extraction');
+        }
+      } else {
+        // If no token, default to CV extraction page
+        console.log('No token available, redirecting to CV extraction page');
+        router.push('/candidate/cv-extraction');
+      }
+    } catch (error) {
+      console.error('Error checking resume existence:', error);
+      // If error occurs, default to CV extraction page
+      router.push('/candidate/cv-extraction');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -93,8 +137,8 @@ export function CandidateLoginForm() {
 
         // Check if user is a candidate
         if (data.user_type === 'candidate') {
-          // Redirect to candidate dashboard or landing page
-          router.push('/candidate/jobs');
+          // Check if candidate has resumes and redirect accordingly
+          await checkResumeExistenceAndRedirect(data.access_token);
         } else {
           setErrors({ general: 'This login is for candidates only. Please use the appropriate login page.' });
         }

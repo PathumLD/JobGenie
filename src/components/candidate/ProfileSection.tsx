@@ -72,7 +72,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ section }) => {
       case 'basic_info':
         return <BasicInfoSectionComponent data={section.data} onEdit={handleEdit} />;
       case 'about':
-        return <AboutSection data={section.data} onEdit={handleEdit} />;
+        return <AboutSection data={section.data} />;
       case 'experience':
         return <ExperienceSection data={section.data} onEdit={handleEdit} onDelete={handleDelete} />;
       case 'education':
@@ -104,7 +104,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ section }) => {
             {section.title}
           </CardTitle>
           <div className="flex items-center gap-2">
-            {section.data.type !== 'basic_info' && (
+            {section.data.type !== 'basic_info' && section.data.type !== 'about' && (
               <button
                 onClick={() => handleEdit({}, '')}
                 className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
@@ -309,7 +309,7 @@ const BasicInfoSectionComponent: React.FC<{ data: BasicInfoSectionType; onEdit: 
 };
 
 // About Section Component
-const AboutSection: React.FC<{ data: any; onEdit: (data: Record<string, unknown>, id?: string) => void }> = ({ data, onEdit }) => (
+const AboutSection: React.FC<{ data: any; }> = ({ data }) => (
   <div className="space-y-4 relative">
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -230,46 +230,7 @@ function CVExtractionContent() {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [extractionSummary, setExtractionSummary] = useState<ExtractionSummary | null>(null);
-  const [isCheckingResumes, setIsCheckingResumes] = useState(true);
-  const [hasResumes, setHasResumes] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Check if user already has resumes
-  useEffect(() => {
-    checkExistingResumes();
-  }, []);
-
-  const checkExistingResumes = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (resumeCheckResponse.ok) {
-          const resumeData = await resumeCheckResponse.json();
-          if (resumeData.success) {
-            setHasResumes(resumeData.hasResumes);
-            if (resumeData.hasResumes) {
-              // User already has resumes, redirect to jobs page
-              console.log('User already has resumes, redirecting to jobs page');
-              setTimeout(() => {
-                window.location.href = '/candidate/jobs';
-              }, 2000);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error checking existing resumes:', error);
-    } finally {
-      setIsCheckingResumes(false);
-    }
-  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -476,36 +437,6 @@ function CVExtractionContent() {
     }
   };
 
-  // Show loading state while checking resumes
-  if (isCheckingResumes) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="ml-3 text-gray-600">Checking resume status...</p>
-      </div>
-    );
-  }
-
-  // Show redirect message if user already has resumes
-  if (hasResumes) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">You already have resumes!</h3>
-          <p className="text-gray-600 mb-4">
-            Redirecting you to the jobs page since you already have resumes uploaded.
-          </p>
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -513,8 +444,34 @@ function CVExtractionContent() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">CV Extraction</h1>
           <p className="text-gray-600 mt-2">
-            Upload your CV to automatically extract and populate your profile information
+            Upload your CV to automatically extract and populate your profile information, or skip to browse jobs
           </p>
+        </div>
+      </div>
+
+      {/* Information Section */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0">
+            <svg className="w-5 h-5 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-emerald-800">CV Extraction is Optional</h3>
+            <p className="text-sm text-emerald-700 mt-1">
+              You can skip CV extraction and still access all features. Upload your CV later to enhance your profile and get better job matches.
+            </p>
+            </div>
+            <Button
+            variant="outline"
+            onClick={() => window.location.href = '/candidate/jobs'}
+            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-medium"
+          >
+            Skip to Jobs
+          </Button>
+          </div>
         </div>
       </div>
 
@@ -622,7 +579,7 @@ function CVExtractionContent() {
             </Card>
             <Card className="bg-white border-0 shadow-sm">
               <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600 mb-1">
+                <div className="text-2xl font-bold text-emerald-600 mb-1">
                   {extractionSummary?.educations_count || 0}
                 </div>
                 <div className="text-sm text-gray-600">Education</div>
@@ -749,7 +706,7 @@ function CVExtractionContent() {
               <CardContent>
                 <div className="space-y-4">
                   {extractedData.educations.map((edu, index) => (
-                    <div key={index} className="border-l-4 border-blue-500 pl-4">
+                    <div key={index} className="border-l-4 border-emerald-500 pl-4">
                       <h4 className="font-semibold text-gray-900">{edu.degree_diploma}</h4>
                       <p className="text-gray-600">{edu.university_school}</p>
                       <p className="text-sm text-gray-500">
@@ -912,10 +869,17 @@ function CVExtractionContent() {
             </Button>
             <Button 
               onClick={handleCreateProfile}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-emerald-600 hover:bg-emerald-700"
             >
               Create Profile
             </Button>
+          </div>
+          
+          {/* Note about uploading later */}
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-600">
+              💡 <strong>Tip:</strong> You can always upload your CV later from your profile or dashboard to enhance your job matching.
+            </p>
           </div>
         </div>
       )}

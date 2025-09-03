@@ -93,19 +93,6 @@ export default function CandidateJobsPage() {
           },
         });
 
-        if (resumeCheckResponse.ok) {
-          const resumeData = await resumeCheckResponse.json();
-          if (resumeData.success) {
-            setHasResumes(resumeData.hasResumes);
-            if (!resumeData.hasResumes) {
-              // Candidate has no resumes, redirect to CV extraction page
-              console.log('No resumes found, redirecting to CV extraction page');
-              setTimeout(() => {
-                window.location.href = '/candidate/cv-extraction';
-              }, 2000);
-            }
-          }
-        }
       }
     } catch (error) {
       console.error('Error checking resume existence:', error);

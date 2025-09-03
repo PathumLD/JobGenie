@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import type { CandidateRegistrationRequest } from '@/types/api';
@@ -20,6 +21,7 @@ interface FormErrors {
 }
 
 export function CandidateRegistrationForm({ isLoading, setIsLoading }: CandidateRegistrationFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     first_name: '',
     last_name: '',
@@ -138,6 +140,10 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
 
       if (response.ok) {
         setSuccessMessage(data.message || 'Registration successful! Please check your email to verify your account.');
+        
+        // Store email for redirect before resetting form
+        const userEmail = formData.email;
+        
         // Reset form
         setFormData({
           first_name: '',
@@ -153,10 +159,10 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
           confirm_password: ''
         });
         
-        // Redirect to verification page after 2 seconds
+        // Redirect to verification page after 1 second
         setTimeout(() => {
-          window.location.href = `/candidate/verify-email?email=${encodeURIComponent(formData.email)}`;
-        }, 2000);
+          router.push(`/candidate/verify-email?email=${encodeURIComponent(userEmail)}`);
+        }, 1000);
       } else {
         setErrorMessage(data.error || 'Registration failed. Please try again.');
         if (data.details) {

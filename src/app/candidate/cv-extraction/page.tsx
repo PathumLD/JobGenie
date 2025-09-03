@@ -230,7 +230,52 @@ function CVExtractionContent() {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [extractionSummary, setExtractionSummary] = useState<ExtractionSummary | null>(null);
+  const [membershipNumber, setMembershipNumber] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch user profile data on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await authenticatedFetch('/api/candidate/profile/current', {
+          method: 'GET',
+        });
+
+        if (response.ok) {
+          const profileData = await response.json();
+          if (profileData.success) {
+            // Get membership number from the profile data
+            const basicInfoSection = profileData.data?.sections?.find(
+              (section: ProfileSection) => section.data.type === 'basic_info'
+            );
+            
+            if (basicInfoSection?.data) {
+              const firstName = basicInfoSection.data.first_name || '';
+              const lastName = basicInfoSection.data.last_name || '';
+              setUserName(`${firstName} ${lastName}`.trim());
+              
+              // Get membership number from candidate data
+              const candidateResponse = await authenticatedFetch('/api/candidate/profile/update-profile', {
+                method: 'GET',
+              });
+              
+              if (candidateResponse.ok) {
+                const candidateData = await candidateResponse.json();
+                if (candidateData.success && candidateData.data?.membership_no) {
+                  setMembershipNumber(candidateData.data.membership_no);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -439,10 +484,27 @@ function CVExtractionContent() {
 
   return (
     <div className="space-y-6">
+      {/* Welcome Section */}
+      {membershipNumber && (
+        <div className="bg-emerald-700 rounded-lg p-6 text-white">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-2">Welcome to JobGenie!</h1>
+            <p className="text-xl mb-4">
+              {userName ? `Hello, ${userName}!` : 'Hello!'}
+            </p>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 inline-block">
+              <p className="text-sm text-emerald-100 mb-1">Your Membership Number</p>
+              <p className="text-2xl font-mono font-bold text-white">
+                {membershipNumber}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">CV Extraction</h1>
           <p className="text-gray-600 mt-2">
             Upload your CV to automatically extract and populate your profile information, or skip to browse jobs
           </p>

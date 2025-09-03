@@ -621,6 +621,19 @@ export async function POST(request: NextRequest) {
 
       // 7. Merge data with existing profile (prevent duplicates)
       // Increase transaction timeout to 30 seconds for complex CV processing
+      console.log('🔄 Starting CV data merge process...');
+      console.log('📊 Data to process:', {
+        work_experiences: extractedData.work_experiences.length,
+        educations: extractedData.educations.length,
+        skills: extractedData.skills.length,
+        projects: extractedData.projects.length,
+        certificates: extractedData.certificates.length,
+        awards: extractedData.awards.length,
+        volunteering: extractedData.volunteering.length,
+        languages: extractedData.languages.length,
+        accomplishments: extractedData.accomplishments.length
+      });
+      
       const mergeResults = await prisma.$transaction(async (tx) => {
         const results = {
           basic_info_updated: false,
@@ -641,7 +654,8 @@ export async function POST(request: NextRequest) {
             skills: 0,
             awards: 0,
             volunteering: 0,
-            languages: 0
+            languages: 0,
+            accomplishments: 0
           }
         };
 
@@ -676,19 +690,45 @@ export async function POST(request: NextRequest) {
           // Get all existing work experiences for this candidate at once
           const existingWorkExps = await tx.workExperience.findMany({
             where: { candidate_id: payload.userId },
-            select: { title: true, company: true, employment_type: true }
+            select: { title: true, company: true, employment_type: true, start_date: true, end_date: true, description: true }
           });
 
-          const existingWorkExpKeys = new Set(
-            existingWorkExps.map(exp => 
-              `${exp.title?.toLowerCase() || ''}|${exp.company?.toLowerCase() || ''}|${exp.employment_type}`
-            )
-          );
+          // Create multiple keys for each existing experience to catch variations
+          const existingWorkExpKeys = new Set();
+          existingWorkExps.forEach(exp => {
+            const title = exp.title?.toLowerCase().trim() || '';
+            const company = exp.company?.toLowerCase().trim() || '';
+            const employmentType = exp.employment_type || '';
+            
+            // Primary key: title + company + employment type
+            existingWorkExpKeys.add(`${title}|${company}|${employmentType}`);
+            
+            // Secondary key: title + company (without employment type)
+            existingWorkExpKeys.add(`${title}|${company}`);
+            
+            // Tertiary key: just company + employment type
+            existingWorkExpKeys.add(`${company}|${employmentType}`);
+          });
 
           for (const workExp of extractedData.work_experiences) {
-            const workExpKey = `${workExp.title?.toLowerCase() || ''}|${workExp.company?.toLowerCase() || ''}|${workExp.employment_type}`;
+            // Skip if essential fields are missing
+            if (!workExp.title?.trim() || !workExp.company?.trim()) {
+              console.log('ℹ️ Skipping work experience with missing title or company:', workExp);
+              continue;
+            }
             
-            if (existingWorkExpKeys.has(workExpKey)) {
+            const title = workExp.title.toLowerCase().trim();
+            const company = workExp.company.toLowerCase().trim();
+            const employmentType = workExp.employment_type || '';
+            
+            // Check multiple keys for duplicates
+            const primaryKey = `${title}|${company}|${employmentType}`;
+            const secondaryKey = `${title}|${company}`;
+            const tertiaryKey = `${company}|${employmentType}`;
+            
+            if (existingWorkExpKeys.has(primaryKey) || 
+                existingWorkExpKeys.has(secondaryKey) || 
+                existingWorkExpKeys.has(tertiaryKey)) {
               results.skipped_duplicates.work_experiences++;
               console.log('ℹ️ Work experience already exists, skipping:', workExp.title, 'at', workExp.company);
               continue;
@@ -719,19 +759,47 @@ export async function POST(request: NextRequest) {
         if (extractedData.educations.length > 0) {
           const existingEducations = await tx.education.findMany({
             where: { candidate_id: payload.userId },
-            select: { degree_diploma: true, university_school: true }
+            select: { degree_diploma: true, university_school: true, field_of_study: true, start_date: true, end_date: true }
           });
 
-          const existingEducationKeys = new Set(
-            existingEducations.map(edu => 
-              `${edu.degree_diploma?.toLowerCase() || ''}|${edu.university_school?.toLowerCase() || ''}`
-            )
-          );
+          // Create multiple keys for each existing education to catch variations
+          const existingEducationKeys = new Set();
+          existingEducations.forEach(edu => {
+            const degree = edu.degree_diploma?.toLowerCase().trim() || '';
+            const university = edu.university_school?.toLowerCase().trim() || '';
+            const field = edu.field_of_study?.toLowerCase().trim() || '';
+            
+            // Primary key: degree + university
+            existingEducationKeys.add(`${degree}|${university}`);
+            
+            // Secondary key: just university (to catch same university with different degrees)
+            existingEducationKeys.add(university);
+            
+            // Tertiary key: degree + field (to catch same degree in different universities)
+            if (field) {
+              existingEducationKeys.add(`${degree}|${field}`);
+            }
+          });
 
           for (const education of extractedData.educations) {
-            const educationKey = `${education.degree_diploma?.toLowerCase() || ''}|${education.university_school?.toLowerCase() || ''}`;
+            // Skip if essential fields are missing
+            if (!education.degree_diploma?.trim() || !education.university_school?.trim()) {
+              console.log('ℹ️ Skipping education with missing degree or university:', education);
+              continue;
+            }
             
-            if (existingEducationKeys.has(educationKey)) {
+            const degree = education.degree_diploma.toLowerCase().trim();
+            const university = education.university_school.toLowerCase().trim();
+            const field = education.field_of_study?.toLowerCase().trim() || '';
+            
+            // Check multiple keys for duplicates
+            const primaryKey = `${degree}|${university}`;
+            const secondaryKey = university;
+            const tertiaryKey = field ? `${degree}|${field}` : '';
+            
+            if (existingEducationKeys.has(primaryKey) || 
+                existingEducationKeys.has(secondaryKey) || 
+                (tertiaryKey && existingEducationKeys.has(tertiaryKey))) {
               results.skipped_duplicates.educations++;
               console.log('ℹ️ Education already exists, skipping:', education.degree_diploma, 'at', education.university_school);
               continue;
@@ -758,14 +826,56 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Process certificates
-        for (const certificate of extractedData.certificates) {
-          const isDuplicate = await isCertificateDuplicate(payload.userId, certificate);
-          if (isDuplicate) {
-            results.skipped_duplicates.certificates++;
-            console.log('ℹ️ Certificate already exists, skipping:', certificate.name, 'from', certificate.issuing_authority);
-            continue;
-          }
+        // Process certificates (batch check for better performance)
+        if (extractedData.certificates.length > 0) {
+          // Get all existing certificates for this candidate at once
+          const existingCertificates = await tx.certificate.findMany({
+            where: { candidate_id: payload.userId },
+            select: { name: true, issuing_authority: true, issue_date: true, credential_id: true }
+          });
+
+          // Create multiple keys for each existing certificate to catch variations
+          const existingCertificateKeys = new Set();
+          existingCertificates.forEach(cert => {
+            const name = cert.name?.toLowerCase().trim() || '';
+            const authority = cert.issuing_authority?.toLowerCase().trim() || '';
+            const credentialId = cert.credential_id?.toLowerCase().trim() || '';
+            
+            // Primary key: name + authority
+            existingCertificateKeys.add(`${name}|${authority}`);
+            
+            // Secondary key: just name (to catch same certificate from different sources)
+            existingCertificateKeys.add(name);
+            
+            // Tertiary key: credential ID if available
+            if (credentialId) {
+              existingCertificateKeys.add(credentialId);
+            }
+          });
+
+          for (const certificate of extractedData.certificates) {
+            // Skip if essential fields are missing
+            if (!certificate.name?.trim() || !certificate.issuing_authority?.trim()) {
+              console.log('ℹ️ Skipping certificate with missing name or authority:', certificate);
+              continue;
+            }
+            
+            const name = certificate.name.toLowerCase().trim();
+            const authority = certificate.issuing_authority.toLowerCase().trim();
+            const credentialId = certificate.credential_id?.toLowerCase().trim() || '';
+            
+            // Check multiple keys for duplicates
+            const primaryKey = `${name}|${authority}`;
+            const secondaryKey = name;
+            const tertiaryKey = credentialId;
+            
+            if (existingCertificateKeys.has(primaryKey) || 
+                existingCertificateKeys.has(secondaryKey) ||
+                (tertiaryKey && existingCertificateKeys.has(tertiaryKey))) {
+              results.skipped_duplicates.certificates++;
+              console.log('ℹ️ Certificate already exists, skipping:', certificate.name, 'from', certificate.issuing_authority);
+              continue;
+            }
 
           await tx.certificate.create({
             data: {
@@ -784,57 +894,135 @@ export async function POST(request: NextRequest) {
             }
           });
           results.new_certificates++;
+          }
         }
 
-        // Process projects
-        for (const project of extractedData.projects) {
-          const isDuplicate = await isProjectDuplicate(payload.userId, project);
-          if (isDuplicate) {
-            results.skipped_duplicates.projects++;
-            console.log('ℹ️ Project already exists, skipping:', project.name);
-            continue;
-          }
+        // Process projects (batch check for better performance)
+        if (extractedData.projects.length > 0) {
+          // Get all existing projects for this candidate at once
+          const existingProjects = await tx.project.findMany({
+            where: { candidate_id: payload.userId },
+            select: { name: true, role: true, technologies: true, description: true }
+          });
 
-          await tx.project.create({
-            data: {
-              candidate_id: payload.userId,
-              name: project.name,
-              description: project.description,
-              start_date: project.start_date ? new Date(project.start_date) : null,
-              end_date: project.end_date ? new Date(project.end_date) : null,
-              is_current: project.is_current,
-              role: project.role,
-              responsibilities: project.responsibilities || [],
-              technologies: project.technologies || [],
-              tools: project.tools || [],
-              methodologies: project.methodologies || [],
-              is_confidential: project.is_confidential,
-              can_share_details: project.can_share_details,
-              url: project.url,
-              repository_url: project.repository_url,
-              media_urls: project.media_urls || [],
-              skills_gained: project.skills_gained || [],
-              created_at: new Date(),
-              updated_at: new Date(),
+          // Create multiple keys for each existing project to catch variations
+          const existingProjectKeys = new Set();
+          existingProjects.forEach(proj => {
+            const name = proj.name?.toLowerCase().trim() || '';
+            const role = proj.role?.toLowerCase().trim() || '';
+            const technologies = proj.technologies?.map(t => t.toLowerCase().trim()).join('|') || '';
+            
+            // Primary key: project name
+            existingProjectKeys.add(name);
+            
+            // Secondary key: name + role
+            if (role) {
+              existingProjectKeys.add(`${name}|${role}`);
+            }
+            
+            // Tertiary key: name + first technology
+            if (technologies) {
+              const firstTech = technologies.split('|')[0];
+              existingProjectKeys.add(`${name}|${firstTech}`);
             }
           });
-          results.new_projects++;
+
+          for (const project of extractedData.projects) {
+            // Skip if essential fields are missing
+            if (!project.name?.trim()) {
+              console.log('ℹ️ Skipping project with missing name:', project);
+              continue;
+            }
+            
+            const name = project.name.toLowerCase().trim();
+            const role = project.role?.toLowerCase().trim() || '';
+            const technologies = project.technologies?.map(t => t.toLowerCase().trim()).join('|') || '';
+            
+            // Check multiple keys for duplicates
+            const primaryKey = name;
+            const secondaryKey = role ? `${name}|${role}` : '';
+            const tertiaryKey = technologies ? `${name}|${technologies.split('|')[0]}` : '';
+            
+            if (existingProjectKeys.has(primaryKey) || 
+                (secondaryKey && existingProjectKeys.has(secondaryKey)) ||
+                (tertiaryKey && existingProjectKeys.has(tertiaryKey))) {
+              results.skipped_duplicates.projects++;
+              console.log('ℹ️ Project already exists, skipping:', project.name);
+              continue;
+            }
+
+            await tx.project.create({
+              data: {
+                candidate_id: payload.userId,
+                name: project.name,
+                description: project.description,
+                start_date: project.start_date ? new Date(project.start_date) : null,
+                end_date: project.end_date ? new Date(project.end_date) : null,
+                is_current: project.is_current,
+                role: project.role,
+                responsibilities: project.responsibilities || [],
+                technologies: project.technologies || [],
+                tools: project.tools || [],
+                methodologies: project.methodologies || [],
+                is_confidential: project.is_confidential,
+                can_share_details: project.can_share_details,
+                url: project.url,
+                repository_url: project.repository_url,
+                media_urls: project.media_urls || [],
+                skills_gained: project.skills_gained || [],
+                created_at: new Date(),
+                updated_at: new Date(),
+              }
+            });
+            results.new_projects++;
+          }
         }
 
         // Process skills (batch processing for better performance)
         if (extractedData.skills.length > 0) {
+          console.log(`🔄 Processing ${extractedData.skills.length} skills...`);
+          
           // Get existing candidate skills
           const existingCandidateSkills = await tx.candidateSkill.findMany({
             where: { candidate_id: payload.userId },
             include: { skill: true }
           });
 
-          const existingSkillNames = new Set(
-            existingCandidateSkills.map(cs => cs.skill.name.toLowerCase())
-          );
+          // Create multiple keys for each existing skill to catch variations
+          const existingSkillNames = new Set();
+          existingCandidateSkills.forEach(cs => {
+            const skillName = cs.skill.name.toLowerCase().trim();
+            existingSkillNames.add(skillName);
+            
+            // Also add common variations and abbreviations
+            if (skillName.includes('javascript')) {
+              existingSkillNames.add('js');
+            }
+            if (skillName.includes('typescript')) {
+              existingSkillNames.add('ts');
+            }
+            if (skillName.includes('react')) {
+              existingSkillNames.add('reactjs');
+            }
+            if (skillName.includes('node')) {
+              existingSkillNames.add('nodejs');
+            }
+            if (skillName.includes('express')) {
+              existingSkillNames.add('expressjs');
+            }
+            if (skillName.includes('mongodb')) {
+              existingSkillNames.add('mongo');
+            }
+            if (skillName.includes('postgresql')) {
+              existingSkillNames.add('postgres');
+            }
+            if (skillName.includes('sql server')) {
+              existingSkillNames.add('mssql');
+            }
+          });
 
           // Get all skills that might exist
-          const skillNames = extractedData.skills.map(s => s.name);
+          const skillNames = extractedData.skills.map((s: ExtractedSkill) => s.name);
           const existingSkills = await tx.skill.findMany({
             where: { 
               name: { in: skillNames, mode: 'insensitive' }
@@ -842,35 +1030,118 @@ export async function POST(request: NextRequest) {
           });
 
           const skillMap = new Map(
-            existingSkills.map(skill => [skill.name.toLowerCase(), skill])
+            existingSkills.map(skill => [skill.name.toLowerCase().trim(), skill])
           );
 
+          // Prepare batch operations for better performance
+          const skillsToCreate: Array<{ name: string; category: string | null; description: string | null }> = [];
+          const candidateSkillsToCreate: Array<{ candidate_id: string; skill_id: string; skill_source: string; proficiency: number; years_of_experience: number; source_title: string; source_type: string }> = [];
+          
           for (const skillData of extractedData.skills) {
-            const skillNameLower = skillData.name.toLowerCase();
+            const skillNameLower = skillData.name.toLowerCase().trim();
             
+            // Skip if skill name is empty or too short
+            if (!skillNameLower || skillNameLower.length < 2) {
+              console.log('ℹ️ Skipping invalid skill name:', skillData.name);
+              continue;
+            }
+            
+            // Check for exact matches and variations
             if (existingSkillNames.has(skillNameLower)) {
               results.skipped_duplicates.skills++;
               console.log('ℹ️ Skill already exists, skipping:', skillData.name);
+              continue;
+            }
+            
+            // Check for common variations
+            const variations = [
+              skillNameLower.replace('javascript', 'js'),
+              skillNameLower.replace('typescript', 'ts'),
+              skillNameLower.replace('reactjs', 'react'),
+              skillNameLower.replace('nodejs', 'node'),
+              skillNameLower.replace('expressjs', 'express'),
+              skillNameLower.replace('mongodb', 'mongo'),
+              skillNameLower.replace('postgresql', 'postgres'),
+              skillNameLower.replace('sql server', 'mssql')
+            ];
+            
+            if (variations.some(variation => existingSkillNames.has(variation))) {
+              results.skipped_duplicates.skills++;
+              console.log('ℹ️ Skill variation already exists, skipping:', skillData.name);
               continue;
             }
 
             // Find or create the skill
             let skill = skillMap.get(skillNameLower);
             if (!skill) {
-              skill = await tx.skill.create({
-                data: {
-                  name: skillData.name,
-                  category: skillData.category,
-                  description: skillData.description,
-                  is_active: true,
+              // Add to batch creation
+              skillsToCreate.push({
+                name: skillData.name.trim(),
+                category: skillData.category?.trim() || null,
+                description: skillData.description?.trim() || null,
+              });
+            }
+          }
+
+          // Batch create skills if any
+          if (skillsToCreate.length > 0) {
+            console.log(`📝 Creating ${skillsToCreate.length} new skills...`);
+            const createdSkills = await tx.skill.createMany({
+              data: skillsToCreate.map(skill => ({
+                ...skill,
+                is_active: true,
+              })),
+              skipDuplicates: true,
+            });
+            console.log(`✅ Created ${createdSkills.count} new skills`);
+            
+            // Refresh skill map with newly created skills
+            if (createdSkills.count > 0) {
+              const newSkills = await tx.skill.findMany({
+                where: { 
+                  name: { in: skillsToCreate.map(s => s.name), mode: 'insensitive' }
                 }
               });
-              skillMap.set(skillNameLower, skill);
+              newSkills.forEach(skill => {
+                skillMap.set(skill.name.toLowerCase().trim(), skill);
+              });
+            }
+          }
+
+          // Now create candidate skills for all valid skills
+          for (const skillData of extractedData.skills) {
+            const skillNameLower = skillData.name.toLowerCase().trim();
+            
+            // Skip if skill name is empty or too short
+            if (!skillNameLower || skillNameLower.length < 2) {
+              continue;
+            }
+            
+            // Skip if already exists
+            if (existingSkillNames.has(skillNameLower)) {
+              continue;
+            }
+            
+            // Skip if variation exists
+            const variations = [
+              skillNameLower.replace('javascript', 'js'),
+              skillNameLower.replace('typescript', 'ts'),
+              skillNameLower.replace('reactjs', 'react'),
+              skillNameLower.replace('nodejs', 'node'),
+              skillNameLower.replace('expressjs', 'express'),
+              skillNameLower.replace('mongodb', 'mongo'),
+              skillNameLower.replace('postgresql', 'postgres'),
+              skillNameLower.replace('sql server', 'mssql')
+            ];
+            
+            if (variations.some(variation => existingSkillNames.has(variation))) {
+              continue;
             }
 
-            // Create candidate skill
-            await tx.candidateSkill.create({
-              data: {
+            // Get the skill (should exist now)
+            const skill = skillMap.get(skillNameLower);
+            if (skill) {
+              candidateSkillsToCreate.push({
                 candidate_id: payload.userId,
                 skill_id: skill.id,
                 skill_source: 'cv_extraction',
@@ -878,9 +1149,19 @@ export async function POST(request: NextRequest) {
                 years_of_experience: 0,
                 source_title: 'CV Extraction',
                 source_type: 'cv_extraction',
-              }
+              });
+            }
+          }
+
+          // Batch create candidate skills
+          if (candidateSkillsToCreate.length > 0) {
+            console.log(`🔗 Creating ${candidateSkillsToCreate.length} candidate skill relationships...`);
+            const createdCandidateSkills = await tx.candidateSkill.createMany({
+              data: candidateSkillsToCreate,
+              skipDuplicates: true,
             });
-            results.new_skills++;
+            console.log(`✅ Created ${createdCandidateSkills.count} candidate skill relationships`);
+            results.new_skills = createdCandidateSkills.count;
           }
         }
 
@@ -946,13 +1227,22 @@ export async function POST(request: NextRequest) {
             continue;
           }
 
+          // Validate and cast proficiency levels
+          const validProficiencies = ['basic', 'conversational', 'professional', 'fluent', 'native'] as const;
+          const oralProficiency = language.oral_proficiency && validProficiencies.includes(language.oral_proficiency as any) 
+            ? (language.oral_proficiency as 'basic' | 'conversational' | 'professional' | 'fluent' | 'native')
+            : null;
+          const writtenProficiency = language.written_proficiency && validProficiencies.includes(language.written_proficiency as any)
+            ? (language.written_proficiency as 'basic' | 'conversational' | 'professional' | 'fluent' | 'native')
+            : null;
+
           await tx.language.create({
             data: {
               candidate_id: payload.userId,
               language: language.language,
               is_native: language.is_native,
-              oral_proficiency: language.oral_proficiency as 'basic' | 'conversational' | 'fluent' | 'native',
-              written_proficiency: language.written_proficiency as 'basic' | 'conversational' | 'fluent' | 'native',
+              oral_proficiency: oralProficiency,
+              written_proficiency: writtenProficiency,
               created_at: new Date(),
               updated_at: new Date(),
             }
@@ -960,30 +1250,70 @@ export async function POST(request: NextRequest) {
           results.new_languages++;
         }
 
-        // Process accomplishments
-        for (const accomplishment of extractedData.accomplishments) {
-          await tx.accomplishment.create({
-            data: {
-              candidate_id: payload.userId,
-              title: accomplishment.title,
-              description: accomplishment.description,
-              work_experience_id: accomplishment.work_experience_id,
-              resume_id: accomplishment.resume_id,
-              created_at: new Date(),
-              updated_at: new Date(),
-            }
+        // Process accomplishments (batch check for better performance)
+        if (extractedData.accomplishments.length > 0) {
+          // Get existing accomplishments for this candidate
+          const existingAccomplishments = await tx.accomplishment.findMany({
+            where: { candidate_id: payload.userId },
+            select: { title: true, description: true }
           });
-          results.new_accomplishments++;
+
+          const existingAccomplishmentKeys = new Set(
+            existingAccomplishments.map(acc => 
+              `${acc.title?.toLowerCase() || ''}|${acc.description?.toLowerCase() || ''}`
+            )
+          );
+
+          for (const accomplishment of extractedData.accomplishments) {
+            // Skip if essential fields are missing
+            if (!accomplishment.title?.trim()) {
+              console.log('ℹ️ Skipping accomplishment with missing title:', accomplishment);
+              continue;
+            }
+            
+            const accomplishmentKey = `${accomplishment.title.toLowerCase().trim()}|${accomplishment.description?.toLowerCase().trim() || ''}`;
+            
+            if (existingAccomplishmentKeys.has(accomplishmentKey)) {
+              results.skipped_duplicates.accomplishments++;
+              console.log('ℹ️ Accomplishment already exists, skipping:', accomplishment.title);
+              continue;
+            }
+
+            await tx.accomplishment.create({
+              data: {
+                candidate_id: payload.userId,
+                title: accomplishment.title,
+                description: accomplishment.description,
+                work_experience_id: accomplishment.work_experience_id,
+                resume_id: accomplishment.resume_id,
+                created_at: new Date(),
+                updated_at: new Date(),
+              }
+            });
+            results.new_accomplishments++;
+          }
         }
 
         return results;
       }, {
-        maxWait: 30000, // 30 seconds
-        timeout: 30000, // 30 seconds
+        maxWait: 120000, // 2 minutes
+        timeout: 120000, // 2 minutes
       });
 
       console.log('✅ CV data merged successfully');
       console.log('📊 Merge results:', mergeResults);
+      console.log('📊 Duplicates skipped:', mergeResults.skipped_duplicates);
+      console.log('📊 New items added:', {
+        work_experiences: mergeResults.new_work_experiences,
+        educations: mergeResults.new_educations,
+        skills: mergeResults.new_skills,
+        projects: mergeResults.new_projects,
+        certificates: mergeResults.new_certificates,
+        awards: mergeResults.new_awards,
+        volunteering: mergeResults.new_volunteering,
+        languages: mergeResults.new_languages,
+        accomplishments: mergeResults.new_accomplishments
+      });
 
       // 7. Upload CV file to Supabase storage and save as resume
       let resumeRecord = null;
@@ -1045,7 +1375,8 @@ export async function POST(request: NextRequest) {
             volunteering_count: extractedData.volunteering.length,
             languages_count: extractedData.languages.length,
             accomplishments_count: extractedData.accomplishments.length
-          }
+          },
+          extracted_data: extractedData
         }
       });
 

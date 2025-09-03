@@ -563,51 +563,15 @@ export function CandidateApprovalPage() {
                        {getApprovalStatusBadge(candidate.approval_status)}
                      </td>
                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                       <div className="flex space-x-2">
-                         {candidate.approval_status === 'approved' ? (
-                           // If approved, show only reject button
                            <Button
                              size="sm"
                              variant="outline"
-                             onClick={() => handleCandidateAction(candidate.user_id, 'reject')}
-                             disabled={approvalStatus.loading}
-                             className="border-red-600 text-red-600 hover:bg-red-50"
-                           >
-                             Reject
-                           </Button>
-                         ) : candidate.approval_status === 'rejected' ? (
-                           // If rejected, show only approve button
-                           <Button
-                             size="sm"
-                             onClick={() => handleCandidateAction(candidate.user_id, 'approve')}
-                             disabled={approvalStatus.loading}
-                             className="bg-emerald-600 hover:bg-emerald-700"
-                           >
-                             Approve
-                           </Button>
-                         ) : (
-                           // If pending, show both buttons
-                           <>
-                             <Button
-                               size="sm"
-                               variant="outline"
-                               onClick={() => handleCandidateAction(candidate.user_id, 'reject')}
-                               disabled={approvalStatus.loading}
-                               className="border-red-600 text-red-600 hover:bg-red-50"
-                             >
-                               Reject
+                          onClick={() => window.location.href = `/mis/candidate-profiles/${candidate.user_id}`}
+                          // onClick={() => window.open(`/mis/candidate-profiles/${candidate.user_id}`, '_blank')}
+                          className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                        >
+                          View Profile
                              </Button>
-                             <Button
-                               size="sm"
-                               onClick={() => handleCandidateAction(candidate.user_id, 'approve')}
-                               disabled={approvalStatus.loading}
-                               className="bg-emerald-600 hover:bg-emerald-700"
-                             >
-                               Approve
-                             </Button>
-                           </>
-                         )}
-                       </div>
                      </td>
                   </tr>
                 ))}

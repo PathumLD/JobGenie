@@ -18,3 +18,28 @@ export interface MisCompanyAccess {
   created_at: Date;
   updated_at: Date;
 }
+
+// MIS Resume Response Types
+export interface MisResumeResponse {
+  success: boolean;
+  data: {
+    resume: {
+      id: string;
+      candidate_id: string;
+      resume_url: string | null;
+      original_filename: string | null;
+      file_size: number | null;
+      file_type: string | null;
+      is_primary: boolean | null;
+      uploaded_at: Date | null;
+      created_at: Date | null;
+      updated_at: Date | null;
+    };
+    message: string;
+  };
+}
+
+export interface MisResumeErrorResponse {
+  success: false;
+  error: string;
+}

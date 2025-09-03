@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Upload, FileText, CheckCircle, AlertCircle, X, Plus, Minus } from 'lucide-react';
+import { Upload, FileText, AlertCircle, X, Plus } from 'lucide-react';
 import { authenticatedFetch } from '@/lib/auth-storage';
 import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
+import { ProfilePreview } from '@/components/candidate/ProfilePreview';
+import { CandidateProfileResponse } from '@/types/candidate-profile';
 
 interface MergeResults {
   basic_info_updated: boolean;
@@ -26,20 +28,11 @@ interface MergeResults {
     awards: number;
     volunteering: number;
     languages: number;
+    accomplishments: number;
   };
 }
 
-interface ExtractedSummary {
-  work_experiences_count: number;
-  educations_count: number;
-  skills_count: number;
-  projects_count: number;
-  certificates_count: number;
-  awards_count: number;
-  volunteering_count: number;
-  languages_count: number;
-  accomplishments_count: number;
-}
+
 
 interface FileInfo {
   name: string;
@@ -47,15 +40,30 @@ interface FileInfo {
   type: string;
 }
 
+interface ExtractedData {
+  basic_info: Record<string, any>;
+  work_experiences: Array<Record<string, any>>;
+  educations: Array<Record<string, any>>;
+  skills: Array<Record<string, any>>;
+  projects: Array<Record<string, any>>;
+  certificates: Array<Record<string, any>>;
+  awards: Array<Record<string, any>>;
+  volunteering: Array<Record<string, any>>;
+  languages: Array<Record<string, any>>;
+  accomplishments: Array<Record<string, any>>;
+}
+
+
+
 interface MergeResponse {
   success: boolean;
   message: string;
   data: {
     file_info: FileInfo;
     merge_results: MergeResults;
-    extracted_summary: ExtractedSummary;
-    resume_record?: any; // Resume record if created
-    upload_result?: any; // Upload result if successful
+    resume_record?: Record<string, unknown>; // Resume record if created
+    upload_result?: Record<string, unknown>; // Upload result if successful
+    extracted_data?: ExtractedData; // Actual extracted data from CV
   };
 }
 
@@ -72,8 +80,30 @@ function UploadCVContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mergeResults, setMergeResults] = useState<MergeResults | null>(null);
-  const [extractedSummary, setExtractedSummary] = useState<ExtractedSummary | null>(null);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [existingProfile, setExistingProfile] = useState<CandidateProfileResponse['data'] | null>(null);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [showProfilePreview, setShowProfilePreview] = useState(false);
+
+  // Fetch existing profile data when component mounts
+  useEffect(() => {
+    fetchExistingProfile();
+  }, []);
+
+  const fetchExistingProfile = async () => {
+    try {
+      const response = await authenticatedFetch('/api/candidate/profile/current', {
+        method: 'GET',
+      });
+
+      if (response.ok) {
+        const profileData: CandidateProfileResponse = await response.json();
+        setExistingProfile(profileData.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch existing profile:', error);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -91,8 +121,9 @@ function UploadCVContent() {
       setSelectedFile(file);
       setError(null);
       setMergeResults(null);
-      setExtractedSummary(null);
       setFileInfo(null);
+      setExtractedData(null);
+      setShowProfilePreview(false);
     }
   };
 
@@ -122,9 +153,32 @@ function UploadCVContent() {
       const result: MergeResponse = await response.json();
       
       if (result.success) {
-        setMergeResults(result.data.merge_results);
-        setExtractedSummary(result.data.extracted_summary);
-        setFileInfo(result.data.file_info);
+              setMergeResults(result.data.merge_results);
+      setFileInfo(result.data.file_info);
+        
+        // For ProfilePreview, we need to create a mock extracted data structure
+        // since the actual extracted data is not returned by the merge API
+        // This will show the merge results in the preview
+        // Use the actual extracted data from the API response
+        if (result.data.extracted_data) {
+          setExtractedData(result.data.extracted_data);
+        } else {
+          // Fallback: Create minimal data structure if extracted_data is not available
+          const extractedDataStructure = {
+            basic_info: {},
+            work_experiences: [],
+            educations: [],
+            skills: [],
+            projects: [],
+            certificates: [],
+            awards: [],
+            volunteering: [],
+            languages: [],
+            accomplishments: []
+          };
+          setExtractedData(extractedDataStructure);
+        }
+        setShowProfilePreview(true);
         
         // Check if resume was uploaded successfully
         if (result.data.resume_record && result.data.upload_result) {
@@ -150,8 +204,9 @@ function UploadCVContent() {
     setSelectedFile(null);
     setError(null);
     setMergeResults(null);
-    setExtractedSummary(null);
     setFileInfo(null);
+    setExtractedData(null);
+    setShowProfilePreview(false);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -162,28 +217,30 @@ function UploadCVContent() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getTotalNewItems = (results: MergeResults): number => {
-    return results.new_work_experiences + 
-           results.new_educations + 
-           results.new_certificates + 
-           results.new_projects + 
-           results.new_skills + 
-           results.new_awards + 
-           results.new_volunteering + 
-           results.new_languages + 
-           results.new_accomplishments;
+  const handleViewProfile = () => {
+    window.location.href = '/candidate/view-profile';
   };
 
-  const getTotalSkippedItems = (results: MergeResults): number => {
-    return results.skipped_duplicates.work_experiences + 
-           results.skipped_duplicates.educations + 
-           results.skipped_duplicates.certificates + 
-           results.skipped_duplicates.projects + 
-           results.skipped_duplicates.skills + 
-           results.skipped_duplicates.awards + 
-           results.skipped_duplicates.volunteering + 
-           results.skipped_duplicates.languages;
+  const handleUploadAnother = () => {
+    clearFile();
   };
+
+  // If showing profile preview, render the ProfilePreview component
+  if (showProfilePreview && mergeResults && extractedData) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ProfilePreview
+            existingProfile={existingProfile}
+            newData={extractedData}
+            mergeResults={mergeResults}
+            onViewProfile={handleViewProfile}
+            onUploadAnother={handleUploadAnother}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-4">
@@ -280,154 +337,6 @@ function UploadCVContent() {
             )}
           </button>
         </div>
-
-        {/* Results Section */}
-        {mergeResults && extractedSummary && fileInfo && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center mb-6">
-              <CheckCircle className="h-8 w-8 text-green-600 mr-3" />
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  CV Processed Successfully
-                </h2>
-                <p className="text-gray-600">
-                  File: {fileInfo.name} ({formatFileSize(fileInfo.size)})
-                </p>
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-800">
-                  {getTotalNewItems(mergeResults)}
-                </div>
-                <div className="text-sm text-green-600">New Items Added</div>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-blue-800">
-                  {getTotalSkippedItems(mergeResults)}
-                </div>
-                <div className="text-sm text-blue-600">Duplicates Skipped</div>
-              </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-purple-800">
-                  {mergeResults.basic_info_updated ? 'Yes' : 'No'}
-                </div>
-                <div className="text-sm text-purple-600">Basic Info Updated</div>
-              </div>
-            </div>
-
-            {/* Detailed Results */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Detailed Results
-              </h3>
-
-              {/* New Items Added */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-medium text-green-800 mb-3 flex items-center">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Items Added to Your Profile
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                  {mergeResults.new_work_experiences > 0 && (
-                    <div className="flex justify-between">
-                      <span>Work Experiences:</span>
-                      <span className="font-medium">{mergeResults.new_work_experiences}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_educations > 0 && (
-                    <div className="flex justify-between">
-                      <span>Education:</span>
-                      <span className="font-medium">{mergeResults.new_educations}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_skills > 0 && (
-                    <div className="flex justify-between">
-                      <span>Skills:</span>
-                      <span className="font-medium">{mergeResults.new_skills}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_projects > 0 && (
-                    <div className="flex justify-between">
-                      <span>Projects:</span>
-                      <span className="font-medium">{mergeResults.new_projects}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_certificates > 0 && (
-                    <div className="flex justify-between">
-                      <span>Certificates:</span>
-                      <span className="font-medium">{mergeResults.new_certificates}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_awards > 0 && (
-                    <div className="flex justify-between">
-                      <span>Awards:</span>
-                      <span className="font-medium">{mergeResults.new_awards}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_volunteering > 0 && (
-                    <div className="flex justify-between">
-                      <span>Volunteering:</span>
-                      <span className="font-medium">{mergeResults.new_volunteering}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_languages > 0 && (
-                    <div className="flex justify-between">
-                      <span>Languages:</span>
-                      <span className="font-medium">{mergeResults.new_languages}</span>
-                    </div>
-                  )}
-                  {mergeResults.new_accomplishments > 0 && (
-                    <div className="flex justify-between">
-                      <span>Accomplishments:</span>
-                      <span className="font-medium">{mergeResults.new_accomplishments}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Resume Upload Status */}
-            {mergeResults && (
-              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <div>
-                    <h4 className="font-medium text-green-800">CV Processed Successfully</h4>
-                    <p className="text-sm text-green-600 mt-1">
-                      Your CV has been processed and new information has been added to your profile.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={() => window.location.href = '/candidate/view-profile'}
-                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors text-center"
-              >
-                View Updated Profile
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedFile(null);
-                  setMergeResults(null);
-                  setExtractedSummary(null);
-                  setFileInfo(null);
-                  setError(null);
-                }}
-                className="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-300 transition-colors text-center"
-              >
-                Upload Another CV
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

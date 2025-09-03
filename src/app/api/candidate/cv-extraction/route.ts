@@ -3,13 +3,14 @@ import { PrismaClient } from '@prisma/client';
 import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
 import { ResumeStorage } from '@/lib/resume-storage';
 import {
-  JWTPayload,
+  // JWTPayload,
   CVExtractionResponse,
   CVExtractedData,
   FileUploadResult,
   ErrorResponse,
   ResumeUploadData
 } from '@/types/resume-management';
+import { JWTPayload } from '@/types';
 
 const prisma = new PrismaClient();
 
@@ -150,7 +151,7 @@ async function extractTextFromCV(file: File): Promise<string> {
 }
 
 // Helper function to extract structured data from CV text (placeholder for AI integration)
-async function extractStructuredData(cvText: string, fileName: string): Promise<CVExtractedData> {
+async function extractStructuredData(cvText: string): Promise<CVExtractedData> {
   // This is a placeholder function
   // In a real implementation, you would use:
   // - OpenAI GPT-4 API to parse and structure the CV text
@@ -408,7 +409,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CVExtract
     let extractedData: CVExtractedData;
     try {
       console.log('🔍 Extracting structured data from CV text...');
-      extractedData = await extractStructuredData(extractedText, cvFile.name);
+      extractedData = await extractStructuredData(extractedText);
       console.log('✅ Structured data extraction completed');
     } catch (structuredExtractionError) {
       console.error('❌ Structured data extraction failed:', structuredExtractionError);

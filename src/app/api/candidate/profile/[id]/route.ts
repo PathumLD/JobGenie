@@ -444,8 +444,8 @@ function buildProfileSections(candidate: any): CandidateProfileSection[] {
             id: lang.id as string,
             language: lang.language as string,
             is_native: lang.is_native as boolean,
-            oral_proficiency: lang.oral_proficiency as string | null,
-            written_proficiency: lang.written_proficiency as string | null
+            oral_proficiency: lang.oral_proficiency as 'native' | 'fluent' | 'professional' | 'conversational' | 'basic' | null,
+            written_proficiency: lang.written_proficiency as 'native' | 'fluent' | 'professional' | 'conversational' | 'basic' | null
           }))
         }
       });

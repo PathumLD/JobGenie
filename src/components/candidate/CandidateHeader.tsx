@@ -116,8 +116,12 @@ export function CandidateHeader({ onSidebarToggle, isSidebarOpen }: CandidateHea
         <div className="flex items-center space-x-4">
           {/* Logo */}
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">JG</span>
+            <div className="w-8 h-8 rounded-lg overflow-hidden">
+              <img 
+                src="/logo.jpg" 
+                alt="Job Genie Logo" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-xl font-bold text-gray-900">Job Genie</span>
           </div>

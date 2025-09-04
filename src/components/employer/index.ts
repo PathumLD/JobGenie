@@ -8,3 +8,5 @@ export { EmployerLayoutWrapper } from './EmployerLayoutWrapper';
 export { EmployerHeader } from './EmployerHeader';
 export { EmployerSidebar } from './EmployerSidebar';
 export { ApprovalNotification } from './ApprovalNotification';
+export { CandidateFilter } from './CandidateFilter';
+export { CandidateResults } from './CandidateResults';

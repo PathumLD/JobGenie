@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { FormSelect } from '@/components/ui/form-select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { toast } from 'sonner';
 import { authenticatedFetch } from '@/lib/auth-storage';
 import { CandidateAuthGuard } from '@/components/auth/CandidateAuthGuard';
+import { JobDesignation, Industry, JobDesignationsResponse, IndustriesResponse } from '@/types/candidate-profile';
 
 // Types
 interface BasicInfo {
@@ -147,10 +149,6 @@ interface ProfileFormData {
   awards: Award[];
 }
 
-interface JobDesignation {
-  id: number;
-  name: string;
-}
 
 const sections = [
   { id: 'basic_info', label: 'Basic Information', description: 'Personal & contact details' },
@@ -189,6 +187,8 @@ function CreateProfileContent() {
      resumeFile?: string;
    } | null>(null);
   const [designations, setDesignations] = useState<JobDesignation[]>([]);
+  const [jobDesignations, setJobDesignations] = useState<JobDesignation[]>([]);
+  const [industries, setIndustries] = useState<Industry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDesignationSuggestions, setShowDesignationSuggestions] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
@@ -310,6 +310,36 @@ function CreateProfileContent() {
       }
     };
     loadDesignations();
+  }, []);
+
+  // Load job designations and industries for SearchableSelect
+  useEffect(() => {
+    const fetchJobDesignations = async () => {
+      try {
+        const response = await fetch('/api/candidate/job-designations');
+        if (response.ok) {
+          const data: JobDesignationsResponse = await response.json();
+          setJobDesignations(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching job designations:', error);
+      }
+    };
+
+    const fetchIndustries = async () => {
+      try {
+        const response = await fetch('/api/candidate/industries');
+        if (response.ok) {
+          const data: IndustriesResponse = await response.json();
+          setIndustries(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching industries:', error);
+      }
+    };
+
+    fetchJobDesignations();
+    fetchIndustries();
   }, []);
 
   const handleDesignationSearch = (query: string) => {
@@ -606,15 +636,41 @@ function CreateProfileContent() {
            )}
          </div>
 
-         <FormInput
+         <SearchableSelect
            label="Current Position"
-           {...methods.register('basic_info.current_position')}
-           defaultValue={cvData?.extracted_data?.basic_info?.current_position || ''}
+           placeholder="Search and select current position..."
+           value={methods.watch('basic_info.current_position') || ''}
+           onChange={(value) => methods.setValue('basic_info.current_position', value)}
+           options={(() => {
+             const options = jobDesignations.map(designation => ({
+               value: designation.name,
+               label: designation.name
+             }));
+             // Remove duplicates based on value
+             const uniqueOptions = options.filter((option, index, self) => 
+               index === self.findIndex(o => o.value === option.value)
+             );
+             return uniqueOptions;
+           })()}
+           className="w-full"
          />
-         <FormInput
+         <SearchableSelect
            label="Industry"
-           {...methods.register('basic_info.industry')}
-           defaultValue={cvData?.extracted_data?.basic_info?.industry || ''}
+           placeholder="Search and select industry..."
+           value={methods.watch('basic_info.industry') || ''}
+           onChange={(value) => methods.setValue('basic_info.industry', value)}
+           options={(() => {
+             const options = industries.map(industry => ({
+               value: industry.description,
+               label: industry.description
+             }));
+             // Remove duplicates based on value
+             const uniqueOptions = options.filter((option, index, self) => 
+               index === self.findIndex(o => o.value === option.value)
+             );
+             return uniqueOptions;
+           })()}
+           className="w-full"
          />
          <FormInput
            label="Location *"

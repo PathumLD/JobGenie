@@ -98,10 +98,10 @@ export function EmployerSidebar({ expanded }: Readonly<EmployerSidebarProps>) {
         </svg>
       ),
       children: [
-        { label: 'Find Candidates', href: '/employer/candidates/find', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
-        { label: 'Saved Candidates', href: '/employer/candidates/saved', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
-        { label: 'Candidate Search', href: '/employer/candidates/search', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
-        { label: 'Talent Pool', href: '/employer/candidates/talent-pool', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> }
+        { label: 'Find Candidates', href: '/employer/candidate/find', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
+        { label: 'Saved Candidates', href: '/employer/candidate/saved', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
+        { label: 'Candidate Search', href: '/employer/candidate/search', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
+        { label: 'Talent Pool', href: '/employer/candidate/talent-pool', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> }
       ]
     },
     {

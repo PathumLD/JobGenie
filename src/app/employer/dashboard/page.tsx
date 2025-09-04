@@ -73,22 +73,6 @@ export default function EmployerDashboardPage() {
     fetchEmployerData();
   }, [router]);
 
-  const handleLogout = async () => {
-    try {
-      // Clear the access token from localStorage
-      localStorage.removeItem('access_token');
-      
-      // Call logout API (optional, for server-side cleanup)
-      await fetch('/api/auth/logout', { method: 'POST' });
-      
-      // Redirect to login page
-      router.push('/employer/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Even if logout API fails, still redirect to login
-      router.push('/employer/login');
-    }
-  };
 
   if (isLoading) {
     return (
@@ -151,18 +135,24 @@ export default function EmployerDashboardPage() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Approval Status</dt>
                   <dd className="mt-1">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      companyData.approval_status === 'approved' 
+                    {(() => {
+                      const status = companyData.approval_status;
+                      const statusClasses = status === 'approved' 
                         ? 'bg-green-100 text-green-800'
-                        : companyData.approval_status === 'pending'
+                        : status === 'pending'
                         ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {companyData.approval_status 
-                        ? companyData.approval_status.charAt(0).toUpperCase() + companyData.approval_status.slice(1)
-                        : 'Unknown'
-                      }
-                    </span>
+                        : 'bg-red-100 text-red-800';
+                      
+                      const statusText = status 
+                        ? status.charAt(0).toUpperCase() + status.slice(1)
+                        : 'Unknown';
+                      
+                      return (
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClasses}`}>
+                          {statusText}
+                        </span>
+                      );
+                    })()}
                   </dd>
                 </div>
                 <div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MisHeader } from './MisHeader';
 import { MisSidebar } from './MisSidebar';
-import { AuthGuard } from '@/components/auth/AuthGuard';
+import { MisAuthGuard } from '@/components/auth/MisAuthGuard';
 
 interface MisLayoutProps {
   children: React.ReactNode;
@@ -32,7 +32,7 @@ export function MisLayout({ children }: MisLayoutProps) {
   };
 
   return (
-    <AuthGuard redirectTo="/mis/login" requiredRole={['mis']}>
+    <MisAuthGuard redirectTo="/mis/login">
       <div className="min-h-screen bg-gray-50">
         {/* Sidebar */}
         <MisSidebar expanded={sidebarExpanded} />
@@ -62,6 +62,6 @@ export function MisLayout({ children }: MisLayoutProps) {
           />
         )}
       </div>
-    </AuthGuard>
+    </MisAuthGuard>
   );
 }

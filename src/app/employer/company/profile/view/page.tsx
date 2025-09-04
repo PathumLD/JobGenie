@@ -5,16 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ApprovalNotification } from '@/components/employer/ApprovalNotification';
 import type { 
   CompanyProfile, 
   CompanyProfileStatusResponse
 } from '@/types/company-profile';
+import type { EmployerApprovalResponse } from '@/types/employer-approval';
 
 export default function ViewCompanyProfilePage() {
   const router = useRouter();
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showApprovalNotification, setShowApprovalNotification] = useState(false);
 
   useEffect(() => {
     const fetchCompanyProfile = async () => {
@@ -41,6 +44,9 @@ export default function ViewCompanyProfilePage() {
 
         if (data.success && data.company) {
           setCompany(data.company);
+          
+          // Check for approval notification
+          await checkApprovalStatus();
         } else {
           throw new Error('Company profile not found');
         }
@@ -49,6 +55,31 @@ export default function ViewCompanyProfilePage() {
         setError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
         setLoading(false);
+      }
+    };
+
+    const checkApprovalStatus = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await fetch('/api/employer/company/approval-check', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const approvalData: EmployerApprovalResponse = await response.json();
+          
+          // Show approval notification if approved and not dismissed
+          if (approvalData.approval_status === 'approved' && !approvalData.approval_notification_dismissed) {
+            setShowApprovalNotification(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking approval status:', error);
       }
     };
 
@@ -140,6 +171,15 @@ export default function ViewCompanyProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Approval Notification */}
+        {showApprovalNotification && (
+          <div className="mb-8">
+            <ApprovalNotification 
+              onDismiss={() => setShowApprovalNotification(false)} 
+            />
+          </div>
+        )}
+        
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>

@@ -7,3 +7,4 @@ export { EmployerLayout } from './EmployerLayout';
 export { EmployerLayoutWrapper } from './EmployerLayoutWrapper';
 export { EmployerHeader } from './EmployerHeader';
 export { EmployerSidebar } from './EmployerSidebar';
+export { ApprovalNotification } from './ApprovalNotification';

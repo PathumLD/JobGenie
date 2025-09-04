@@ -9,6 +9,10 @@ import type {
   CompanyProfile, 
   CompanyProfileStatusResponse
 } from '@/types/company-profile';
+import type {
+  BusinessRegistrationAnalysisResult,
+  BusinessRegistrationAnalysisResponse
+} from '@/types/business-registration-analysis';
 
 export function CompanyProfileViewPage() {
   const router = useRouter();
@@ -20,6 +24,9 @@ export function CompanyProfileViewPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<BusinessRegistrationAnalysisResult | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   useEffect(() => {
     if (!companyId) {
@@ -30,9 +37,16 @@ export function CompanyProfileViewPage() {
 
     const fetchCompanyProfile = async () => {
       try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          router.push('/mis/login');
+          return;
+        }
+
         const response = await fetch(`/api/mis/company-profile?companyId=${companyId}`, {
           method: 'GET',
           headers: {
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -66,9 +80,16 @@ export function CompanyProfileViewPage() {
       setActionLoading(true);
       setActionMessage(null);
 
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        router.push('/mis/login');
+        return;
+      }
+
       const response = await fetch(`/api/mis/company-verification?action=${action}`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ companyId: company.id })
@@ -102,6 +123,58 @@ export function CompanyProfileViewPage() {
       });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDocumentAnalysis = async () => {
+    if (!company?.business_registration_url) return;
+
+    try {
+      setAnalysisLoading(true);
+      setActionMessage(null);
+
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        router.push('/mis/login');
+        return;
+      }
+
+      const response = await fetch('/api/mis/business-registration-analysis', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          companyId: company.id,
+          documentUrl: company.business_registration_url
+        })
+      });
+
+      const result: BusinessRegistrationAnalysisResponse = await response.json();
+
+      if (response.ok && result.success && result.result) {
+        setAnalysisResult(result.result);
+        setShowAnalysis(true);
+        setActionMessage({
+          type: 'success',
+          text: 'Document analysis completed successfully'
+        });
+
+        // Clear message after 5 seconds
+        setTimeout(() => {
+          setActionMessage(null);
+        }, 5000);
+      } else {
+        throw new Error(result.error || 'Failed to analyze document');
+      }
+    } catch (error) {
+      setActionMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'An error occurred during analysis'
+      });
+    } finally {
+      setAnalysisLoading(false);
     }
   };
 
@@ -378,6 +451,20 @@ export function CompanyProfileViewPage() {
                            </svg>
                            Download
                          </Button>
+                         <Button
+                           onClick={handleDocumentAnalysis}
+                           disabled={analysisLoading}
+                           className="bg-purple-600 hover:bg-purple-700 text-white"
+                         >
+                           {analysisLoading ? (
+                             <LoadingSpinner size="sm" />
+                           ) : (
+                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                             </svg>
+                           )}
+                           {analysisLoading ? 'Analyzing...' : 'Analize to verify'}
+                         </Button>
                        </div>
                      </div>
                      
@@ -408,6 +495,189 @@ export function CompanyProfileViewPage() {
                              }
                            }}
                          />
+                       </div>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+             )}
+
+             {/* AI Analysis Results */}
+             {showAnalysis && analysisResult && (
+               <Card>
+                 <CardHeader>
+                   <CardTitle className="flex items-center justify-between">
+                     <span>AI Document Analysis Results</span>
+                     <div className="flex items-center space-x-2">
+                       {(() => {
+                         const status = analysisResult.overall_verification_status;
+                         const statusClasses = status === 'verified' 
+                           ? 'bg-green-100 text-green-800'
+                           : status === 'needs_review'
+                           ? 'bg-yellow-100 text-yellow-800'
+                           : 'bg-red-100 text-red-800';
+                         
+                         return (
+                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses}`}>
+                             {status.replace('_', ' ').toUpperCase()}
+                           </span>
+                         );
+                       })()}
+                       <span className="text-sm text-gray-500">
+                         {analysisResult.confidence_score}% Confidence
+                       </span>
+                     </div>
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent className="space-y-6">
+                   {/* Analysis Summary */}
+                   <div className="bg-gray-50 p-4 rounded-lg">
+                     <h4 className="font-medium text-gray-900 mb-2">Analysis Summary</h4>
+                     <p className="text-gray-700 text-sm">{analysisResult.analysis_summary}</p>
+                   </div>
+
+                   {/* Extracted Data */}
+                   <div>
+                     <h4 className="font-medium text-gray-900 mb-3">Extracted Document Data</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                       <div>
+                         <span className="font-medium text-gray-600">Company Name:</span>
+                         <p className="text-gray-900">{analysisResult.extracted_data.company_name}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-600">Registration Number:</span>
+                         <p className="text-gray-900">{analysisResult.extracted_data.business_registration_number}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-600">Registration Date:</span>
+                         <p className="text-gray-900">{analysisResult.extracted_data.registration_date}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-600">Business Type:</span>
+                         <p className="text-gray-900">{analysisResult.extracted_data.business_type}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-600">Industry:</span>
+                         <p className="text-gray-900">{analysisResult.extracted_data.industry}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-600">Company Status:</span>
+                         <p className="text-gray-900">{analysisResult.extracted_data.company_status}</p>
+                       </div>
+                     </div>
+                   </div>
+
+                   {/* Comparison Results */}
+                   <div>
+                     <h4 className="font-medium text-gray-900 mb-3">Data Comparison</h4>
+                     <div className="space-y-2">
+                       {analysisResult.comparison_results.map((comparison) => (
+                         <div key={`${comparison.field}-${comparison.match_status}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                           <div className="flex-1">
+                             <span className="font-medium text-gray-600 capitalize">
+                               {comparison.field.replace('_', ' ')}:
+                             </span>
+                             <div className="text-sm text-gray-700 mt-1">
+                               <div>Document: {comparison.document_value || 'Not found'}</div>
+                               <div>Profile: {comparison.profile_value || 'Not provided'}</div>
+                             </div>
+                           </div>
+                           <div className="flex items-center space-x-2">
+                             {(() => {
+                               const matchStatus = comparison.match_status;
+                               const statusClasses = matchStatus === 'match' 
+                                 ? 'bg-green-100 text-green-800'
+                                 : matchStatus === 'mismatch'
+                                 ? 'bg-red-100 text-red-800'
+                                 : 'bg-yellow-100 text-yellow-800';
+                               
+                               return (
+                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses}`}>
+                                   {matchStatus.replace('_', ' ')}
+                                 </span>
+                               );
+                             })()}
+                             <span className="text-xs text-gray-500">
+                               {comparison.confidence_score}%
+                             </span>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* Discrepancies */}
+                   {analysisResult.discrepancies.length > 0 && (
+                     <div>
+                       <h4 className="font-medium text-gray-900 mb-3">Discrepancies Found</h4>
+                       <div className="space-y-2">
+                         {analysisResult.discrepancies.map((discrepancy) => (
+                           <div key={`${discrepancy.field}-${discrepancy.severity}`} className={`p-3 rounded-lg border-l-4 ${
+                             discrepancy.severity === 'high' 
+                               ? 'bg-red-50 border-red-400'
+                               : discrepancy.severity === 'medium'
+                               ? 'bg-yellow-50 border-yellow-400'
+                               : 'bg-blue-50 border-blue-400'
+                           }`}>
+                             <div className="flex items-start justify-between">
+                               <div>
+                                 <p className="font-medium text-gray-900">{discrepancy.field}</p>
+                                 <p className="text-sm text-gray-700 mt-1">{discrepancy.issue}</p>
+                                 <p className="text-xs text-gray-600 mt-1">{discrepancy.suggested_action}</p>
+                               </div>
+                               {(() => {
+                                 const severity = discrepancy.severity;
+                                 const severityClasses = severity === 'high' 
+                                   ? 'bg-red-100 text-red-800'
+                                   : severity === 'medium'
+                                   ? 'bg-yellow-100 text-yellow-800'
+                                   : 'bg-blue-100 text-blue-800';
+                                 
+                                 return (
+                                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${severityClasses}`}>
+                                     {severity}
+                                   </span>
+                                 );
+                               })()}
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Recommendations */}
+                   {analysisResult.recommendations.length > 0 && (
+                     <div>
+                       <h4 className="font-medium text-gray-900 mb-3">Recommendations</h4>
+                       <ul className="space-y-2">
+                         {analysisResult.recommendations.map((recommendation) => (
+                           <li key={recommendation} className="flex items-start space-x-2 text-sm text-gray-700">
+                             <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                             </svg>
+                             <span>{recommendation}</span>
+                           </li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+
+                   {/* Document Quality */}
+                   <div>
+                     <h4 className="font-medium text-gray-900 mb-3">Document Quality Assessment</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                       <div>
+                         <span className="font-medium text-gray-600">Clarity:</span>
+                         <p className="text-gray-900 capitalize">{analysisResult.document_quality.clarity}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-600">Completeness:</span>
+                         <p className="text-gray-900 capitalize">{analysisResult.document_quality.completeness}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-600">Authenticity:</span>
+                         <p className="text-gray-900">{analysisResult.document_quality.authenticity_indicators.join(', ')}</p>
                        </div>
                      </div>
                    </div>

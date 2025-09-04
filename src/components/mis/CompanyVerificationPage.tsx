@@ -59,7 +59,18 @@ export function CompanyVerificationPage() {
         ...(filters.approvalStatus && { approvalStatus: filters.approvalStatus })
       });
 
-      const response = await fetch(`/api/mis/pending-companies?${params}`);
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        console.error('No access token found');
+        return;
+      }
+
+      const response = await fetch(`/api/mis/pending-companies?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data: PendingCompaniesResponse = await response.json();
 
       if (data.success) {
@@ -115,9 +126,16 @@ export function CompanyVerificationPage() {
         return;
       }
 
-      const response = await fetch(`/api/mis/company-verification?action=bulk-approve`, {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        console.error('No access token found');
+        return;
+      }
+
+      const response = await fetch(`/api/mis/company-verification?action=bulk-${action}`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 

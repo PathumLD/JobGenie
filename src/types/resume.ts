@@ -4,7 +4,6 @@
 export type {
   Resume,
   ResumeWithRelations,
-  JWTPayload,
   ResumeUploadResponse,
   ResumeListResponse,
   ResumeUpdateResponse,

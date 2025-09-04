@@ -9,3 +9,4 @@ export * from './EmailVerificationForm';
 export * from './VerificationSuccess';
 export * from './GoogleSignInButton';
 export * from './OAuthSessionHandler';
+export * from './ProfilePreview';

@@ -1,5 +1,18 @@
 // Candidate Profile Types for LinkedIn-style sections
 
+// JWT Payload interface
+export interface JWTPayload {
+  userId: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  membership_no?: string;
+  role: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
+  exp?: number;
+  iat?: number;
+}
+
 export interface CandidateProfileSection {
   id: string;
   title: string;
@@ -61,6 +74,7 @@ export interface BasicInfoSection {
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
   nic?: string | null;
   passport?: string | null;
+  membership_no?: string | null;
   pronouns?: string | null;
   disability_status?: string | null;
   veteran_status?: string | null;
@@ -74,6 +88,7 @@ export interface BasicInfoSection {
   certifications?: string | null;
   awards?: string | null;
   volunteer_experience?: string | null;
+  email?: string | null;
 }
 
 export interface AboutSection {

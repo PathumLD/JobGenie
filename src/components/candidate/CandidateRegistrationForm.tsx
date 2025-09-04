@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import type { CandidateRegistrationRequest } from '@/types/api';
@@ -20,6 +21,7 @@ interface FormErrors {
 }
 
 export function CandidateRegistrationForm({ isLoading, setIsLoading }: CandidateRegistrationFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     first_name: '',
     last_name: '',
@@ -37,6 +39,20 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+
+  // Check if passwords are valid for enabling submit button
+  const arePasswordsValid = (): boolean => {
+    return formData.password.length >= 8 && 
+           formData.confirm_password.length > 0 && 
+           formData.password === formData.confirm_password;
+  };
+
+  // Check if form is ready for submission
+  const isFormReady = (): boolean => {
+    return !isLoading && arePasswordsValid();
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -138,6 +154,10 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
 
       if (response.ok) {
         setSuccessMessage(data.message || 'Registration successful! Please check your email to verify your account.');
+        
+        // Store email for redirect before resetting form
+        const userEmail = formData.email;
+        
         // Reset form
         setFormData({
           first_name: '',
@@ -153,10 +173,10 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
           confirm_password: ''
         });
         
-        // Redirect to verification page after 2 seconds
+        // Redirect to verification page after 1 second
         setTimeout(() => {
-          window.location.href = `/candidate/verify-email?email=${encodeURIComponent(formData.email)}`;
-        }, 2000);
+          router.push(`/candidate/verify-email?email=${encodeURIComponent(userEmail)}`);
+        }, 1000);
       } else {
         setErrorMessage(data.error || 'Registration failed. Please try again.');
         if (data.details) {
@@ -384,18 +404,63 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
             Password *
           </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleInputChange}
-            className={getInputClassName('password')}
-            placeholder="Enter password"
-            disabled={isLoading}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className={getInputClassName('password')}
+              placeholder="Enter password"
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              disabled={isLoading}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? (
+                  <>
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.45 18.45 0 0 1-2.16 3.19m-6.72-3.19A10.07 10.07 0 0 1 12 4c-7 0-11 8-11 8a18.45 18.45 0 0 1 5.06-5.94" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </>
+                )}
+              </svg>
+            </button>
+          </div>
           {errors.password && (
             <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+          )}
+          {formData.password && !errors.password && (
+            <p className={`text-xs mt-1 ${
+              formData.password.length >= 8
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}>
+              {formData.password.length >= 8
+                ? '✓ Password meets requirements'
+                : `${8 - formData.password.length} more characters needed`
+              }
+            </p>
           )}
         </div>
 
@@ -403,18 +468,65 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
           <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-1">
             Confirm Password *
           </label>
-          <input
-            type="password"
-            id="confirm_password"
-            name="confirm_password"
-            value={formData.confirm_password}
-            onChange={handleInputChange}
-            className={getInputClassName('confirm_password')}
-            placeholder="Confirm password"
-            disabled={isLoading}
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              id="confirm_password"
+              name="confirm_password"
+              value={formData.confirm_password}
+              onChange={handleInputChange}
+              className={getInputClassName('confirm_password')}
+              placeholder="Confirm password"
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              disabled={isLoading}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                {showConfirmPassword ? (
+                  <>
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.45 18.45 0 0 1-2.16 3.19m-6.72-3.19A10.07 10.07 0 0 1 12 4c-7 0-11 8-11 8a18.45 18.45 0 0 1 5.06-5.94" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </>
+                )}
+              </svg>
+            </button>
+          </div>
           {errors.confirm_password && (
             <p className="text-red-500 text-xs mt-1">{errors.confirm_password}</p>
+          )}
+          {formData.confirm_password && !errors.confirm_password && (
+            <p className={`text-xs mt-1 ${
+              formData.password === formData.confirm_password && formData.password.length >= 8
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}>
+              {formData.password === formData.confirm_password && formData.password.length >= 8
+                ? '✓ Passwords match'
+                : formData.password.length < 8
+                ? 'Password must be at least 8 characters'
+                : 'Passwords do not match'
+              }
+            </p>
           )}
         </div>
       </div>
@@ -422,7 +534,7 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
       {/* Submit Button */}
       <Button
         type="submit"
-        disabled={isLoading}
+        disabled={!isFormReady()}
         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
       >
         {isLoading ? (
@@ -469,7 +581,7 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
       <div className="text-center">
         <p className="text-sm text-gray-500 mb-2">Do you want to see jobs?</p>
         <Link 
-          href="/candidate/jobs" 
+          href="/jobs" 
           className="block text-lg border  px-4 py-2 rounded-md hover:bg-emerald-100 font-semibold text-emerald-600 hover:text-emerald-700 transition-colors py-3 border-b border-emerald-100"
         >
           See all Jobs

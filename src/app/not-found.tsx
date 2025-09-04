@@ -35,7 +35,7 @@ export default function NotFound() {
         <div className="space-y-4">
           <button 
             onClick={handleGoBack}
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-block bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors"
           >
             Go Back
           </button>

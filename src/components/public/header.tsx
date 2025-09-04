@@ -37,6 +37,7 @@ export const Header = ({ showSkipLink = false }: HeaderProps) => {
 
                         {/* Desktop Navigation */}
                         <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+                            <Link href="/jobs" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">Browse Jobs</Link>
                             <a href="#about" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">About</a>
                             <a href="#features" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">Features</a>
                             <a href="#contact" className="text-emerald-700 hover:text-emerald-900 transition-colors text-sm lg:text-base">Contact</a>
@@ -82,6 +83,13 @@ export const Header = ({ showSkipLink = false }: HeaderProps) => {
                             {/* Navigation Links */}
                             <nav className="flex-1 flex flex-col justify-center px-6 py-8">
                                 <div className="space-y-6">
+                                    <Link 
+                                        href="/jobs" 
+                                        className="block text-2xl font-semibold text-emerald-900 hover:text-emerald-700 transition-colors py-3 border-b border-emerald-100"
+                                        onClick={closeMobileMenu}
+                                    >
+                                        Browse Jobs
+                                    </Link>
                                     <a 
                                         href="#about" 
                                         className="block text-2xl font-semibold text-emerald-900 hover:text-emerald-700 transition-colors py-3 border-b border-emerald-100"

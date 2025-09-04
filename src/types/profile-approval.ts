@@ -13,6 +13,7 @@ export interface ProfileApprovalResponse {
   missingFields: string[];
   candidateData?: CandidateProfileData;
   message: string;
+  approval_notification_dismissed: boolean;
 }
 
 export interface CandidateProfileData {

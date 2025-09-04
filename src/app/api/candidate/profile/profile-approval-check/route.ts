@@ -76,7 +76,8 @@ export async function GET(
         date_of_birth: true,
         address: true,
         phone1: true,
-        approval_status: true
+        approval_status: true,
+        approval_notification_dismissed: true
       }
     });
 
@@ -150,7 +151,8 @@ export async function GET(
       approval_status,
       missingFields,
       candidateData,
-      message
+      message,
+      approval_notification_dismissed: candidate.approval_notification_dismissed || false
     } as ProfileApprovalResponse);
 
   } catch (error) {

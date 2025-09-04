@@ -487,9 +487,7 @@ function CreateProfileContent() {
        
        toast.success(`Profile saved with ${totalRecords} records! Redirecting...`);
       
-      setTimeout(() => {
-        router.push('/candidate/view-profile');
-      }, 3000);
+      router.push('/candidate/view-profile');
       
          } catch (error) {
        console.error('Profile save error:', error);
@@ -559,8 +557,8 @@ function CreateProfileContent() {
              {selectedImageFile ? 'Image selected! Will be uploaded when you update your profile.' : 'Select a professional photo (max 5MB)'}
            </p>
            {cvData?.resumeFile && (
-             <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-               <p className="text-sm text-blue-700">
+             <div className="mt-2 p-2 bg-emerald-50 rounded-lg">
+               <p className="text-sm text-emerald-700">
                  📄 Resume extracted from CV - will be saved with your profile
                </p>
              </div>
@@ -970,12 +968,12 @@ function CreateProfileContent() {
       </div>
 
       {/* {skillFields.length >= 20 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-emerald-800">
               Maximum of 20 skills reached. Remove some skills to add new ones.
             </p>
           </div>
@@ -1418,12 +1416,12 @@ function CreateProfileContent() {
     
     return (
       <div className="space-y-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-emerald-800">
               Please review all the information below before creating your profile. You can go back to any section to make changes.
             </p>
           </div>
@@ -1467,8 +1465,8 @@ function CreateProfileContent() {
              {/* Resume Preview */}
              {cvData?.resumeFile && (
                <div className="mb-6 flex items-center space-x-4">
-                 <div className="w-20 h-20 bg-blue-100 rounded-lg flex items-center justify-center">
-                   <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <div className="w-20 h-20 bg-emerald-100 rounded-lg flex items-center justify-center">
+                   <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                    </svg>
                  </div>
@@ -1592,7 +1590,7 @@ function CreateProfileContent() {
             {formData.educations.length > 0 ? (
               <div className="space-y-4">
                 {formData.educations.map((edu, index) => (
-                  <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <div key={index} className="border-l-4 border-emerald-500 pl-4 py-2">
                     <h4 className="font-medium text-gray-900">{edu.degree_diploma || 'No degree'}</h4>
                     <p className="text-gray-600">{edu.university_school || 'No institution'}</p>
                     <p className="text-sm text-gray-500">
@@ -1824,19 +1822,15 @@ function CreateProfileContent() {
       {/* CV Data Status */}
       {cvData && (
         <Card className="bg-emerald-50 border-emerald-200">
-          <CardContent className="p-4">
+          <CardContent className="px-4 py-1">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                 <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-                             <div>
+                <div>
                  <h3 className="font-medium text-emerald-900">CV Data Loaded Successfully!</h3>
-                 <p className="text-sm text-emerald-700">
-                   {cvData.extracted_data?.work_experiences?.length || 0} work experiences, {cvData.extracted_data?.educations?.length || 0} education entries, {cvData.extracted_data?.skills?.length || 0} skills extracted
-                   {cvData.resumeFile && ' • Resume extracted'}
-                 </p>
                </div>
             </div>
           </CardContent>

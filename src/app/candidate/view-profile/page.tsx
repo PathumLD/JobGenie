@@ -264,30 +264,6 @@ function CandidateProfileContent() {
                     </div>
                   )}
                 </div>
-
-                {/* Stats Section */}
-                {/* <div className="flex-shrink-0">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-700 mb-1">
-                        {profileData.profile_summary.total_experience_years}
-                      </div>
-                      <div className="text-sm text-gray-600">Years Experience</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-700 mb-1">
-                        {profileData.profile_summary.total_projects}
-                      </div>
-                      <div className="text-sm text-gray-600">Projects</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-700 mb-1">
-                        {profileData.profile_summary.total_skills}
-                      </div>
-                      <div className="text-sm text-gray-600">Skills</div>
-                    </div>
-                  </div>
-                </div> */}
               </div>
             </CardContent>
           </Card>

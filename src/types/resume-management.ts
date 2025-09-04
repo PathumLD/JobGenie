@@ -26,19 +26,6 @@ export type ResumeWithRelations = Prisma.ResumeGetPayload<{
   };
 }>;
 
-// JWT Payload interface
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  membership_no?: string;
-  role: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
-  userType: 'candidate' | 'employer' | 'mis' | 'recruitment_agency';
-  exp?: number;
-  iat?: number;
-}
-
 // Resume Upload Data
 export interface ResumeUploadData {
   is_allow_fetch?: boolean;
@@ -174,6 +161,16 @@ export interface CVExtractionResponse {
   success: boolean;
   message: string;
   data: CVExtractionData;
+}
+
+export interface CVExtractionHistoryResponse {
+  success: boolean;
+  message: string;
+  data: {
+    candidate_id: string;
+    extractions: CVExtractionData[];
+    total_count: number;
+  };
 }
 
 // Resume Analysis Types

@@ -1,9 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 
 export function VerificationSuccess() {
+  const router = useRouter();
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
       {/* Header Section */}
@@ -71,7 +74,7 @@ export function VerificationSuccess() {
                 
                 <Button
                   variant="outline"
-                  onClick={() => window.location.href = '/auth/login'}
+                  onClick={() => router.push('/candidate/login')}
                   className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-medium py-3 rounded-lg transition-all duration-200"
                 >
                   Sign In to Your Account

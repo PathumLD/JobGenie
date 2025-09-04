@@ -19,13 +19,19 @@ export function EmployerHeader({ onSidebarToggle, isSidebarOpen }: Readonly<Empl
     last_name?: string | null;
     email?: string;
   } | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<{
+    name?: string;
+    email?: string;
+    logo_url?: string;
+  } | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Fetch user profile on component mount
+  // Fetch user profile and company profile on component mount
   useEffect(() => {
     fetchUserProfile();
+    fetchCompanyProfile();
   }, []);
 
   // Close dropdowns when clicking outside
@@ -64,6 +70,33 @@ export function EmployerHeader({ onSidebarToggle, isSidebarOpen }: Readonly<Empl
     }
   };
 
+  const fetchCompanyProfile = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const response = await fetch('/api/employer/company/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.company) {
+            setCompanyProfile({
+              name: data.company.name,
+              email: data.company.email,
+              logo_url: data.company.logo_url
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching company profile:', error);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       console.log('🔄 Starting employer logout process...');
@@ -84,17 +117,35 @@ export function EmployerHeader({ onSidebarToggle, isSidebarOpen }: Readonly<Empl
   };
 
   const getInitials = () => {
-    if (!userProfile) return 'E';
-    const firstName = userProfile.first_name || '';
-    const lastName = userProfile.last_name || '';
-    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'E';
+    if (companyProfile?.name) {
+      // Use company name initials
+      const words = companyProfile.name.split(' ');
+      if (words.length >= 2) {
+        return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+      } else {
+        return companyProfile.name.substring(0, 2).toUpperCase();
+      }
+    }
+    // Fallback to employer name if company name not available
+    if (userProfile) {
+      const firstName = userProfile.first_name || '';
+      const lastName = userProfile.last_name || '';
+      return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'E';
+    }
+    return 'E';
   };
 
   const getDisplayName = () => {
-    if (!userProfile) return 'Employer';
-    const firstName = userProfile.first_name || '';
-    const lastName = userProfile.last_name || '';
-    return `${firstName} ${lastName}`.trim() || 'Employer';
+    if (companyProfile?.name) {
+      return companyProfile.name;
+    }
+    // Fallback to employer name if company name not available
+    if (userProfile) {
+      const firstName = userProfile.first_name || '';
+      const lastName = userProfile.last_name || '';
+      return `${firstName} ${lastName}`.trim() || 'Employer';
+    }
+    return 'Employer';
   };
 
   return (
@@ -201,8 +252,25 @@ export function EmployerHeader({ onSidebarToggle, isSidebarOpen }: Readonly<Empl
               onClick={() => setShowProfileDropdown(!showProfileDropdown)}
               className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-medium text-sm">{getInitials()}</span>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-emerald-600">
+                {companyProfile?.logo_url ? (
+                  <img
+                    src={companyProfile.logo_url}
+                    alt={`${companyProfile.name} logo`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to initials if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<span class="text-white font-medium text-sm">${getInitials()}</span>`;
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="text-white font-medium text-sm">{getInitials()}</span>
+                )}
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-900">{getDisplayName()}</p>
@@ -219,7 +287,7 @@ export function EmployerHeader({ onSidebarToggle, isSidebarOpen }: Readonly<Empl
                 <CardContent className="p-2">
                   <div className="px-3 py-2 border-b border-gray-200">
                     <p className="text-sm font-medium text-gray-900">{getDisplayName()}</p>
-                    <p className="text-xs text-gray-500">{userProfile?.email}</p>
+                    <p className="text-xs text-gray-500">{companyProfile?.email || userProfile?.email}</p>
                   </div>
                   
                   <div className="py-1">

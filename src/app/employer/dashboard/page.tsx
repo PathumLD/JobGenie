@@ -17,7 +17,7 @@ interface CompanyData {
   id: string;
   name?: string | null;
   industry?: string | null;
-  verification_status?: string | null;
+  approval_status?: string | null;
 }
 
 export default function EmployerDashboardPage() {
@@ -149,17 +149,17 @@ export default function EmployerDashboardPage() {
                   <dd className="mt-1 text-sm text-gray-900">{companyData.industry || 'Not specified'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Verification Status</dt>
+                  <dt className="text-sm font-medium text-gray-500">Approval Status</dt>
                   <dd className="mt-1">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      companyData.verification_status === 'verified' 
+                      companyData.approval_status === 'approved' 
                         ? 'bg-green-100 text-green-800'
-                        : companyData.verification_status === 'pending'
+                        : companyData.approval_status === 'pending'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {companyData.verification_status 
-                        ? companyData.verification_status.charAt(0).toUpperCase() + companyData.verification_status.slice(1)
+                      {companyData.approval_status 
+                        ? companyData.approval_status.charAt(0).toUpperCase() + companyData.approval_status.slice(1)
                         : 'Unknown'
                       }
                     </span>

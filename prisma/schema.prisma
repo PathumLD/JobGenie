@@ -668,7 +668,6 @@ model Company {
   benefits                  String?
   culture_description       String?
   social_media_links        Json?
-  verification_status       VerificationStatus  @default(pending)
   approval_status           ApprovalStatus      @default(pending)
   verified_at               DateTime?
   created_at                DateTime            @default(now())
@@ -676,6 +675,7 @@ model Company {
   business_registration_no  String              @unique @db.VarChar(20)
   business_registration_url String
   registered_address        String
+  approval_notification_dismissed Boolean?            @default(false)
   employers                 Employer[]
   jobs                      Job[]               @relation("CompanyJobs")
   mis_access                MisCompanyAccess[]
@@ -684,7 +684,7 @@ model Company {
   @@index([slug])
   @@index([industry])
   @@index([company_size])
-  @@index([verification_status])
+  @@index([approval_status])
   @@map("company")
 }
 

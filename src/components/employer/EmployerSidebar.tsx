@@ -83,7 +83,7 @@ export function EmployerSidebar({ expanded }: Readonly<EmployerSidebarProps>) {
         </svg>
       ),
       children: [
-        { label: 'Browse Candidates', href: '/employer/candidates', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
+        { label: 'Find Candidates', href: '/employer/candidates/find', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
         { label: 'Saved Candidates', href: '/employer/candidates/saved', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Candidate Search', href: '/employer/candidates/search', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Talent Pool', href: '/employer/candidates/talent-pool', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> }
@@ -199,7 +199,7 @@ export function EmployerSidebar({ expanded }: Readonly<EmployerSidebarProps>) {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 h-screen bg-white border-r border-gray-200 transition-all duration-300 ${
+      className={`fixed left-0 top-0 z-20 h-screen bg-white border-r border-gray-200 transition-all duration-300 ${
         expanded ? 'w-64' : 'w-16'
       }`}
     >

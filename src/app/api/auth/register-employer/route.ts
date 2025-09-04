@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
         industry: result.company.industry,
         company_size: result.company.company_size,
         company_type: result.company.company_type,
-        verification_status: result.company.verification_status,
+        approval_status: result.company.approval_status,
         created_at: result.company.created_at,
         updated_at: result.company.updated_at
       },

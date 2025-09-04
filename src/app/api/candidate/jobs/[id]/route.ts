@@ -46,7 +46,7 @@ interface JobDetailResponse {
       culture_description: string | null;
       founded_year: number | null;
       social_media_links: unknown;
-      verification_status: string;
+      approval_status: string;
     } | null;
     
     // Custom company information (for jobs posted by MIS users)
@@ -206,7 +206,7 @@ export async function GET(
         culture_description: job.company.culture_description,
         founded_year: job.company.founded_year,
         social_media_links: job.company.social_media_links,
-        verification_status: job.company.verification_status
+        approval_status: job.company.approval_status
       } : null,
       
       customCompanyName: job.customCompanyName,

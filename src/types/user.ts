@@ -122,7 +122,7 @@ export interface Company {
   benefits?: string | null;
   culture_description?: string | null;
   social_media_links?: Record<string, unknown> | null;
-  verification_status: 'pending' | 'verified' | 'rejected';
+  approval_status: 'pending' | 'approved' | 'rejected';
   verified_at?: Date | null;
   created_at: Date;
   updated_at: Date;

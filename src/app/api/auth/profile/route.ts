@@ -129,7 +129,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ProfileRes
         id: user.employer.company.id,
         name: user.employer.company.name,
         industry: user.employer.company.industry,
-        verification_status: user.employer.company.verification_status
+        approval_status: user.employer.company.approval_status
       };
     }
 

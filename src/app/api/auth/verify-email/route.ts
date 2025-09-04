@@ -63,10 +63,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyEma
       );
     }
 
-    // Check if user is a candidate
-    if (user.role !== 'candidate') {
+    // Check if user is a candidate or employer
+    if (user.role !== 'candidate' && user.role !== 'employer') {
       return NextResponse.json(
-        { error: 'Access denied. This account is not registered as a candidate' },
+        { error: 'Access denied. This account is not registered as a candidate or employer' },
         { status: 403 }
       );
     }

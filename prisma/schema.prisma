@@ -669,6 +669,7 @@ model Company {
   culture_description       String?
   social_media_links        Json?
   verification_status       VerificationStatus  @default(pending)
+  approval_status           ApprovalStatus      @default(pending)
   verified_at               DateTime?
   created_at                DateTime            @default(now())
   updated_at                DateTime            @updatedAt

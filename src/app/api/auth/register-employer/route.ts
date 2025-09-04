@@ -85,14 +85,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if company already exists with the same business registration number
-    const existingCompany = await prisma.company.findFirst({
+    const existingCompanyByRegNo = await prisma.company.findFirst({
       where: { business_registration_no }
     });
 
-    if (existingCompany) {
+    if (existingCompanyByRegNo) {
       return NextResponse.json({
         error: 'Company already exists',
         message: 'A company with this business registration number already exists'
+      }, { status: 409 });
+    }
+
+    // Check if company already exists with the same email
+    const existingCompanyByEmail = await prisma.company.findFirst({
+      where: { email }
+    });
+
+    if (existingCompanyByEmail) {
+      return NextResponse.json({
+        error: 'Company already exists',
+        message: 'A company with this email address already exists'
+      }, { status: 409 });
+    }
+
+    // Check if there's already an employer with this email (additional safety check)
+    const existingEmployer = await prisma.employer.findFirst({
+      where: {
+        user: {
+          email: email
+        }
+      }
+    });
+
+    if (existingEmployer) {
+      return NextResponse.json({
+        error: 'Employer already exists',
+        message: 'An employer account with this email already exists'
       }, { status: 409 });
     }
 

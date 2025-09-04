@@ -106,7 +106,10 @@ export default function Home() {
                     Post jobs, screen applicants, and build your dream team with AI assistance.
                   </p>
                   <Button 
-                    onClick={() => handleUserTypeSelection('employer')}
+                    onClick={() => {
+                      handleUserTypeSelection('employer')
+                      router.push('/employer/register')
+                    }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
                     Signup as Employer

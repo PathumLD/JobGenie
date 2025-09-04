@@ -658,7 +658,7 @@ function CreateProfileContent() {
        </div>
 
        {/* Salary and Availability Information */}
-       {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
          <FormInput
            label="Expected Minimum Salary (LKR)"
            type="number"
@@ -671,7 +671,7 @@ function CreateProfileContent() {
            {...methods.register('basic_info.expected_salary_max', { valueAsNumber: true })}
            defaultValue={cvData?.extracted_data?.basic_info?.expected_salary_max || 0}
          />
-       </div> */}
+       </div>
 
        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
          <FormInput

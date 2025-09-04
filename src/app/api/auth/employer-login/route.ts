@@ -156,6 +156,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
           created_at: user.employer.created_at,
           updated_at: user.employer.updated_at
         },
+        company: {
+          id: user.employer.company.id,
+          name: user.employer.company.name,
+          profile_created: user.employer.company.profile_created,
+          approval_status: user.employer.company.approval_status
+        },
         user_type: 'employer' as const,
         access_token: accessToken
       },

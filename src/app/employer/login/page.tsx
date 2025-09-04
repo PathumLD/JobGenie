@@ -90,8 +90,14 @@ export default function EmployerLoginPage() {
         localStorage.setItem('access_token', result.access_token);
       }
 
-      // Redirect to employer dashboard
-      router.push('/employer/dashboard');
+      // Redirect based on company profile status
+      if (result.company?.profile_created) {
+        // Profile exists, redirect to view profile
+        router.push('/employer/company/profile/view');
+      } else {
+        // Profile doesn't exist, redirect to create profile
+        router.push('/employer/company/profile/create');
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Login failed');
     } finally {
@@ -215,9 +221,9 @@ export default function EmployerLoginPage() {
                         </div>
 
                         <div className="text-sm">
-                          <a href="#" className="font-medium text-emerald-600 hover:text-emerald-500">
+                          <button type="button" className="font-medium text-emerald-600 hover:text-emerald-500">
                             Forgot your password?
-                          </a>
+                          </button>
                         </div>
                       </div>
 

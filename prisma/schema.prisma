@@ -675,6 +675,7 @@ model Company {
   business_registration_no  String              @unique @db.VarChar(20)
   business_registration_url String
   registered_address        String
+  profile_created            Boolean             @default(false)
   approval_notification_dismissed Boolean?            @default(false)
   employers                 Employer[]
   jobs                      Job[]               @relation("CompanyJobs")

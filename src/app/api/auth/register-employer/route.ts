@@ -170,6 +170,7 @@ export async function POST(request: NextRequest) {
           industry,
           company_size: 'startup', // Default value
           company_type: 'corporation' // Default value
+          // profile_created defaults to false in schema
         }
       });
 

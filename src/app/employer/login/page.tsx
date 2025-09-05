@@ -247,7 +247,7 @@ export default function EmployerLoginPage() {
                       <div className="text-center">
                         <p className="text-sm text-gray-600">
                           Don't have an account?{' '}
-                          <Link href="/employer" className="font-medium text-emerald-600 hover:text-emerald-500">
+                          <Link href="/employer/register" className="font-medium text-emerald-600 hover:text-emerald-500">
                             Register here
                           </Link>
                         </p>

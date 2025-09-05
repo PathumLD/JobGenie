@@ -19,6 +19,7 @@ const publicRoutes = [
   '/api/auth/send-verification',
   '/api/auth/verify-email',
   '/api/auth/refresh-token',
+  '/api/employer/document-analysis', // Public endpoint for document analysis during registration
   '/auth/callback',
   '/auth/auth-code-error'
 ];

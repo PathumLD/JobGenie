@@ -179,9 +179,44 @@ function CompleteProfileContent() {
           console.warn('⚠️ User profile update failed:', await userResponse.text());
         }
 
-        // Profile updated successfully, redirect to jobs page
-        console.log('✅ Profile updated successfully, redirecting to jobs page...');
-        router.push('/candidate/jobs');
+        // Profile updated successfully, now check for CV before redirecting
+        console.log('✅ Profile updated successfully, checking for CV...');
+        
+        try {
+          const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (resumeCheckResponse.ok) {
+            const resumeData = await resumeCheckResponse.json();
+            if (resumeData.success) {
+              if (resumeData.hasResumes) {
+                // CV exists, redirect to jobs page
+                console.log('✅ CV found, redirecting to jobs page...');
+                router.push('/candidate/jobs');
+              } else {
+                // No CV, redirect to CV extraction page
+                console.log('⚠️ No CV found, redirecting to CV extraction page...');
+                router.push('/candidate/cv-extraction');
+              }
+            } else {
+              console.error('Resume check failed:', resumeData.error);
+              // If check fails, redirect to CV extraction page
+              router.push('/candidate/cv-extraction');
+            }
+          } else {
+            console.error('Resume check request failed');
+            // If request fails, redirect to CV extraction page
+            router.push('/candidate/cv-extraction');
+          }
+        } catch (resumeError) {
+          console.error('Error checking resume existence:', resumeError);
+          // If error occurs, redirect to CV extraction page
+          router.push('/candidate/cv-extraction');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to update profile');

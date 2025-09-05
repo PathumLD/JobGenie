@@ -48,11 +48,13 @@ export default function EditCompanyProfilePage() {
     company_type: 'startup',
     slug: '',
     industry: '',
+    logo: undefined,
     social_media_links: {
       linkedin: ''
     }
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -134,6 +136,28 @@ export default function EditCompanyProfilePage() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, logo: file }));
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // Clear error when user selects a file
+      if (errors.logo) {
+        setErrors(prev => ({ ...prev, logo: '' }));
+      }
+      if (errorMessage) {
+        setErrorMessage('');
+      }
+    }
+  };
+
   const handleSocialMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -177,6 +201,17 @@ export default function EditCompanyProfilePage() {
       newErrors.industry = 'Industry is required';
     }
 
+    // Validate logo file
+    if (formData.logo) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(formData.logo.type)) {
+        newErrors.logo = 'Invalid file type. Only JPEG, PNG, and WebP images are allowed.';
+      }
+      if (formData.logo.size > 5 * 1024 * 1024) {
+        newErrors.logo = 'File size must be less than 5MB.';
+      }
+    }
+
     // Validate LinkedIn URL
     if (formData.social_media_links.linkedin && !/^https?:\/\/.+/.test(formData.social_media_links.linkedin)) {
       newErrors.social_linkedin = 'Please enter a valid LinkedIn URL';
@@ -214,6 +249,10 @@ export default function EditCompanyProfilePage() {
       submitFormData.append('slug', formData.slug);
       submitFormData.append('industry', formData.industry);
       submitFormData.append('linkedin', formData.social_media_links.linkedin || '');
+      
+      if (formData.logo) {
+        submitFormData.append('logo', formData.logo);
+      }
 
       const response = await fetch('/api/employer/company/profile', {
         method: 'PUT',
@@ -332,6 +371,35 @@ export default function EditCompanyProfilePage() {
                     error={errors.website}
                     placeholder="https://www.example.com"
                   />
+                </div>
+                <div>
+                  <label htmlFor="logo" className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Logo
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        id="logo"
+                        name="logo"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                      />
+                      {errors.logo && (
+                        <p className="mt-1 text-sm text-red-600">{errors.logo}</p>
+                      )}
+                    </div>
+                    {(logoPreview || formData.logo) && (
+                      <div className="flex-shrink-0">
+                        <img
+                          src={logoPreview || (formData.logo ? URL.createObjectURL(formData.logo) : '')}
+                          alt="Logo preview"
+                          className="h-16 w-16 object-cover rounded-lg border border-gray-300"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <FormInput

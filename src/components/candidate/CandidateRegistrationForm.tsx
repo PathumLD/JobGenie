@@ -20,7 +20,7 @@ interface FormErrors {
   [key: string]: string;
 }
 
-export function CandidateRegistrationForm({ isLoading, setIsLoading }: CandidateRegistrationFormProps) {
+export function CandidateRegistrationForm({ isLoading, setIsLoading }: Readonly<CandidateRegistrationFormProps>) {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     first_name: '',
@@ -264,7 +264,7 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="nic" className="block text-sm font-medium text-gray-700 mb-1">
-            NIC *
+            NIC / Passport *
           </label>
           <input
             type="text"
@@ -281,7 +281,7 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
           )}
         </div>
 
-        <div>
+        {/* <div>
           <label htmlFor="passport" className="block text-sm font-medium text-gray-700 mb-1">
             Passport (Optional)
           </label>
@@ -295,7 +295,7 @@ export function CandidateRegistrationForm({ isLoading, setIsLoading }: Candidate
             placeholder="Enter passport number"
             disabled={isLoading}
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Gender and Date of Birth */}

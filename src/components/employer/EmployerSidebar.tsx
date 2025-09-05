@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -19,6 +19,7 @@ interface NavItem {
 export function EmployerSidebar({ expanded }: Readonly<EmployerSidebarProps>) {
   const pathname = usePathname();
   const [expandedSections, setExpandedSections] = useState<string[]>(['dashboard']);
+  const [pendingCount, setPendingCount] = useState<number>(0);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -30,6 +31,36 @@ export function EmployerSidebar({ expanded }: Readonly<EmployerSidebarProps>) {
 
   const isActive = (href: string) => pathname === href;
   const isSectionActive = (section: string) => pathname.startsWith(section);
+
+  // Fetch pending notification count
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await fetch('/api/employer/interview-notifications/count', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setPendingCount(data.counts.pending);
+        }
+      } catch (error) {
+        console.error('Error fetching pending count:', error);
+      }
+    };
+
+    fetchPendingCount();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPendingCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navItems: NavItem[] = [
     {
@@ -82,7 +113,7 @@ export function EmployerSidebar({ expanded }: Readonly<EmployerSidebarProps>) {
       ),
       children: [
         { label: 'All Applications', href: '/employer/applications', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
-        { label: 'Pending Review', href: '/employer/applications/pending', icon: <span className="w-2 h-2 bg-amber-400 rounded-full" /> },
+        { label: 'Interview Invitations', href: '/employer/applications/pending', icon: <span className="w-2 h-2 bg-amber-400 rounded-full" /> },
         { label: 'Shortlisted', href: '/employer/applications/shortlisted', icon: <span className="w-2 h-2 bg-blue-400 rounded-full" /> },
         { label: 'Interviewed', href: '/employer/applications/interviewed', icon: <span className="w-2 h-2 bg-purple-400 rounded-full" /> },
         { label: 'Hired', href: '/employer/applications/hired', icon: <span className="w-2 h-2 bg-green-400 rounded-full" /> },
@@ -100,6 +131,12 @@ export function EmployerSidebar({ expanded }: Readonly<EmployerSidebarProps>) {
       children: [
         { label: 'Find Candidates', href: '/employer/candidate/find', icon: <span className="w-2 h-2 bg-emerald-400 rounded-full" /> },
         { label: 'Saved Candidates', href: '/employer/candidate/saved', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
+        { 
+          label: 'Pending Interviews', 
+          href: '/employer/candidate/pending', 
+          icon: <span className="w-2 h-2 bg-amber-400 rounded-full" />,
+          badge: pendingCount > 0 ? pendingCount.toString() : undefined
+        },
         { label: 'Candidate Search', href: '/employer/candidate/search', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> },
         { label: 'Talent Pool', href: '/employer/candidate/talent-pool', icon: <span className="w-2 h-2 bg-gray-400 rounded-full" /> }
       ]

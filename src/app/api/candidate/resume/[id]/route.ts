@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getTokenFromHeaders, verifyToken } from '@/lib/jwt';
-import { Resume, JWTPayload, ErrorResponse } from '@/types/resume-management';
+import { Resume, ErrorResponse } from '@/types/resume-management';
+import { JWTPayload } from '@/types';
 
 const prisma = new PrismaClient();
 
@@ -10,10 +11,12 @@ export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<{ success: boolean; data: Resume } | ErrorResponse>> {
   try {
     console.log('🔄 Get Resume by ID API called');
+
+    const { id: resumeId } = await params;
 
     // 1. Authenticate user
     const token = getTokenFromHeaders(request);
@@ -46,7 +49,7 @@ export async function GET(
       );
     }
 
-    const resumeId = params.id;
+    // resumeId already extracted from params above
 
     // 2. Get resume by ID
     const resume = await prisma.resume.findFirst({

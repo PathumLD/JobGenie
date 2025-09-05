@@ -1,10 +1,10 @@
-import { CandidateLayout } from '@/components/candidate/CandidateLayout';
+
 import { CandidateLayoutWrapper } from '@/components/candidate/CandidateLayoutWrapper';
 
 export default function CandidateSectionLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return <CandidateLayoutWrapper>{children}</CandidateLayoutWrapper>;
 }

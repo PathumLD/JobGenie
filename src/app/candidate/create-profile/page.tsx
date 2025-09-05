@@ -59,6 +59,7 @@ interface BasicInfo {
   years_of_experience: number | null;
   experience_level: 'entry' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal' | null;
   profile_image_url: string | null;
+  professional_qualification: string | null;
 }
 
 interface WorkExperience {
@@ -216,7 +217,8 @@ function CreateProfileContent() {
         personal_website: '',
         years_of_experience: 0,
         experience_level: 'entry',
-        profile_image_url: ''
+        profile_image_url: '',
+        professional_qualification: ''
       },
       work_experiences: [],
       educations: [],
@@ -709,6 +711,27 @@ function CreateProfileContent() {
              { value: 'senior', label: 'Senior' },
              { value: 'lead', label: 'Lead' },
              { value: 'principal', label: 'Principal' }
+           ]}
+         />
+         <FormSelect
+           label="Professional Qualification"
+           {...methods.register('basic_info.professional_qualification')}
+           defaultValue={cvData?.extracted_data?.basic_info?.professional_qualification || ''}
+           options={[
+             { value: '', label: 'Select qualification...' },
+             { value: 'high_school', label: 'High School' },
+             { value: 'associate_degree', label: 'Associate Degree' },
+             { value: 'bachelors_degree', label: 'Bachelor\'s Degree' },
+             { value: 'masters_degree', label: 'Master\'s Degree' },
+             { value: 'doctorate_phd', label: 'Doctorate (PhD)' },
+             { value: 'undergraduate', label: 'Undergraduate' },
+             { value: 'post_graduate', label: 'Post Graduate' },
+             { value: 'diploma', label: 'Diploma' },
+             { value: 'certificate', label: 'Certificate' },
+             { value: 'professional_certification', label: 'Professional Certification' },
+             { value: 'vocational_training', label: 'Vocational Training' },
+             { value: 'some_college', label: 'Some College' },
+             { value: 'no_formal_education', label: 'No Formal Education' }
            ]}
          />
        </div>

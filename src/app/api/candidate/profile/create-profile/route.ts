@@ -251,6 +251,7 @@ export async function POST(request: NextRequest) {
         years_of_experience: profileData.basic_info.years_of_experience,
         experience_level: profileData.basic_info.experience_level,
         profile_image_url: profileData.basic_info.profile_image_url,
+        professional_qualification: profileData.basic_info.professional_qualification,
         resume_url: resumeUrl,
         membership_no: membershipNo,
         profile_completion_percentage: 100,

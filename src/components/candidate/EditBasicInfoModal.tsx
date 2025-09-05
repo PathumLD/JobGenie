@@ -67,6 +67,7 @@ interface EditBasicInfoFormData {
   certifications: string;
   awards: string;
   volunteer_experience: string;
+  professional_qualification: string;
 }
 
 export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
@@ -174,7 +175,8 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
       skills: basicInfo.skills || '',
       certifications: basicInfo.certifications || '',
       awards: basicInfo.awards || '',
-      volunteer_experience: basicInfo.volunteer_experience || ''
+      volunteer_experience: basicInfo.volunteer_experience || '',
+      professional_qualification: basicInfo.professional_qualification || ''
     }
   });
 
@@ -255,7 +257,8 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
           skills: data.skills || null,
           certifications: data.certifications || null,
           awards: data.awards || null,
-          volunteer_experience: data.volunteer_experience || null
+          volunteer_experience: data.volunteer_experience || null,
+          professional_qualification: data.professional_qualification || null
         }
       };
 
@@ -426,6 +429,26 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
                   { value: 'senior', label: 'Senior' },
                   { value: 'lead', label: 'Lead' },
                   { value: 'principal', label: 'Principal' }
+                ]}
+              />
+              <FormSelect
+                label="Professional Qualification"
+                {...methods.register('professional_qualification')}
+                options={[
+                  { value: '', label: 'Select qualification...' },
+                  { value: 'high_school', label: 'High School' },
+                  { value: 'associate_degree', label: 'Associate Degree' },
+                  { value: 'bachelors_degree', label: 'Bachelor\'s Degree' },
+                  { value: 'masters_degree', label: 'Master\'s Degree' },
+                  { value: 'doctorate_phd', label: 'Doctorate (PhD)' },
+                  { value: 'undergraduate', label: 'Undergraduate' },
+                  { value: 'post_graduate', label: 'Post Graduate' },
+                  { value: 'diploma', label: 'Diploma' },
+                  { value: 'certificate', label: 'Certificate' },
+                  { value: 'professional_certification', label: 'Professional Certification' },
+                  { value: 'vocational_training', label: 'Vocational Training' },
+                  { value: 'some_college', label: 'Some College' },
+                  { value: 'no_formal_education', label: 'No Formal Education' }
                 ]}
               />
               <FormSelect

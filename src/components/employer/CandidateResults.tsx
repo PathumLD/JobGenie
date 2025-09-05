@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { NotificationModal } from './NotificationModal';
 // Simple modal implementation since dialog component might not exist
 
 interface FilteredCandidate {
@@ -25,6 +26,7 @@ interface FilteredCandidate {
   location: string | null;
   profile_image_url: string | null;
   professional_summary: string | null;
+  professional_qualification: string | null;
   created_at: Date | null;
   date_of_birth: Date | null;
   educations: Array<{
@@ -34,7 +36,6 @@ interface FilteredCandidate {
   }>;
   skills: Array<{
     name: string;
-    proficiency: number | null;
   }>;
   work_experiences: Array<{
     title: string | null;
@@ -42,6 +43,37 @@ interface FilteredCandidate {
     start_date: Date | null;
     end_date: Date | null;
     is_current: boolean | null;
+  }>;
+}
+
+interface FilterCriteria {
+  field: string;
+  designation: string;
+  salary_min: string;
+  salary_max: string;
+  years_of_experience: string;
+  qualification: string;
+}
+
+interface FilterOptions {
+  fields: Array<{
+    unit: number;
+    description: string;
+    major: number;
+    major_label: string;
+    sub_major: number;
+    sub_major_label: string;
+  }>;
+  designations: Array<{
+    id: number;
+    name: string;
+    isco_08_unit: number;
+    isco_08_major: number;
+    isco_08_major_label: string;
+  }>;
+  qualifications: Array<{
+    value: string;
+    label: string;
   }>;
 }
 
@@ -53,6 +85,8 @@ interface CandidateResultsProps {
   readonly loading?: boolean;
   readonly onPageChange: (page: number) => void;
   readonly onViewProfile: (candidateId: string) => void;
+  readonly currentFilterCriteria?: FilterCriteria | null;
+  readonly filterOptions?: FilterOptions | null;
 }
 
 export function CandidateResults({ 
@@ -62,12 +96,34 @@ export function CandidateResults({
   totalPages, 
   loading = false, 
   onPageChange, 
-  onViewProfile 
+  onViewProfile,
+  currentFilterCriteria,
+  filterOptions
 }: CandidateResultsProps) {
   const [interestedCandidates, setInterestedCandidates] = useState<Set<string>>(new Set());
-  const [notInterestedCandidates, setNotInterestedCandidates] = useState<Set<string>>(new Set());
+  const [notifiedCandidates, setNotifiedCandidates] = useState<Set<string>>(new Set());
   const [selectedCandidate, setSelectedCandidate] = useState<FilteredCandidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [selectedCandidateForNotification, setSelectedCandidateForNotification] = useState<FilteredCandidate | null>(null);
+
+  // Load notified candidates from localStorage on component mount
+  useEffect(() => {
+    const savedNotifiedCandidates = localStorage.getItem('notifiedCandidates');
+    if (savedNotifiedCandidates) {
+      try {
+        const parsed = JSON.parse(savedNotifiedCandidates);
+        setNotifiedCandidates(new Set(parsed));
+      } catch (error) {
+        console.error('Error parsing notified candidates from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save notified candidates to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('notifiedCandidates', JSON.stringify([...notifiedCandidates]));
+  }, [notifiedCandidates]);
 
   const calculateAge = (dateOfBirth: Date | null): string => {
     if (!dateOfBirth) return 'Not specified';
@@ -101,28 +157,6 @@ export function CandidateResults({
     return `${exp} year${exp !== 1 ? 's' : ''}`;
   };
 
-  const getProfessionalQualifications = (workExperiences: Array<{title: string | null; company: string | null; start_date: Date | null; end_date: Date | null; is_current: boolean | null}>, currentPosition?: string | null): string => {
-    // Debug: Log the work experiences data
-    console.log('Work Experiences for Professional Qualifications:', workExperiences);
-    
-    // Collect all titles from work experience
-    const workExperienceTitles = workExperiences
-      .map(exp => exp.title)
-      .filter(Boolean);
-    
-    // Combine with current position if available
-    const allTitles = [...workExperienceTitles];
-    if (currentPosition && !allTitles.includes(currentPosition)) {
-      allTitles.unshift(currentPosition); // Add current position at the beginning
-    }
-    
-    // Remove duplicates while preserving order
-    const uniqueTitles = allTitles.filter((value, index, self) => self.indexOf(value) === index);
-    
-    console.log('All titles (work experience + current position):', uniqueTitles);
-    
-    return uniqueTitles.length > 0 ? uniqueTitles.join(', ') : 'Not specified';
-  };
 
   const getAcademicQualifications = (educations: Array<{degree_diploma: string | null; field_of_study: string | null; university_school: string | null}>): string => {
     if (educations.length === 0) return 'Not specified';
@@ -136,42 +170,29 @@ export function CandidateResults({
     return qualifications.length > 0 ? qualifications.join(', ') : 'Not specified';
   };
 
-  const getSpecializedField = (industry: string | null, skills: Array<{name: string; proficiency: number | null}>): string => {
-    if (industry) return industry;
-    if (skills.length > 0) {
-      // Get top 3 skills by proficiency or just top 3
-      const sortedSkills = skills.toSorted((a, b) => (b.proficiency || 0) - (a.proficiency || 0));
-      const topSkills = sortedSkills
-        .slice(0, 3)
-        .map(skill => skill.name);
-      return topSkills.join(', ');
-    }
-    return 'Not specified';
+  const formatProfessionalQualification = (qualification: string | null): string => {
+    if (!qualification) return 'Not specified';
+    
+    const qualificationMap: Record<string, string> = {
+      'high_school': 'High School',
+      'associate_degree': 'Associate Degree',
+      'bachelors_degree': 'Bachelor\'s Degree',
+      'masters_degree': 'Master\'s Degree',
+      'doctorate_phd': 'Doctorate (PhD)',
+      'undergraduate': 'Undergraduate',
+      'post_graduate': 'Post Graduate',
+      'diploma': 'Diploma',
+      'certificate': 'Certificate',
+      'professional_certification': 'Professional Certification',
+      'vocational_training': 'Vocational Training',
+      'some_college': 'Some College',
+      'no_formal_education': 'No Formal Education'
+    };
+    
+    return qualificationMap[qualification] || qualification;
   };
 
-  const getWorkExperience = (workExperiences: Array<{title: string | null; company: string | null; start_date: Date | null; end_date: Date | null; is_current: boolean | null}>, industry?: string | null): string => {
-    // Debug: Log the work experiences data
-    console.log('Work Experiences for Work Experience column:', workExperiences);
-    
-    if (workExperiences.length === 0) {
-      // If no work experience, try to use industry
-      console.log('No work experiences found, using industry:', industry);
-      return industry || 'Not specified';
-    }
-    
-    // Get all title and company combinations from work experience
-    const experiences = workExperiences
-      .map(exp => {
-        const title = exp.title || 'Unknown Position';
-        const company = exp.company || 'Unknown Company';
-        return `${title} at ${company}`;
-      })
-      .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
-    
-    console.log('Work experience combinations:', experiences);
-    
-    return experiences.length > 0 ? experiences.join('; ') : (industry || 'Not specified');
-  };
+
 
   const handleInterestToggle = async (candidateId: string, isInterested: boolean) => {
     try {
@@ -199,25 +220,15 @@ export function CandidateResults({
         
         // Update local state based on the action
         if (isInterested) {
-          // Select: Add to interested, remove from not interested
+          // Select: Add to interested
           setInterestedCandidates(prev => {
             const newSet = new Set(prev);
             newSet.add(candidateId);
             return newSet;
           });
-          setNotInterestedCandidates(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(candidateId);
-            return newSet;
-          });
         } else {
-          // Unselect: Remove from interested, don't add to not interested
+          // Unselect: Remove from interested
           setInterestedCandidates(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(candidateId);
-            return newSet;
-          });
-          setNotInterestedCandidates(prev => {
             const newSet = new Set(prev);
             newSet.delete(candidateId);
             return newSet;
@@ -233,18 +244,8 @@ export function CandidateResults({
             newSet.add(candidateId);
             return newSet;
           });
-          setNotInterestedCandidates(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(candidateId);
-            return newSet;
-          });
         } else {
           setInterestedCandidates(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(candidateId);
-            return newSet;
-          });
-          setNotInterestedCandidates(prev => {
             const newSet = new Set(prev);
             newSet.delete(candidateId);
             return newSet;
@@ -256,10 +257,54 @@ export function CandidateResults({
     }
   };
 
-  const handleCardClick = (candidate: FilteredCandidate) => {
+  const handleViewCandidate = (candidate: FilteredCandidate) => {
     setSelectedCandidate(candidate);
     setIsModalOpen(true);
   };
+
+  const handleNotifyCandidate = (candidate: FilteredCandidate) => {
+    console.log('handleNotifyCandidate called with filter options:', filterOptions);
+    console.log('Current filter criteria:', currentFilterCriteria);
+    setSelectedCandidateForNotification(candidate);
+    setNotificationModalOpen(true);
+  };
+
+  // Get designation name from filter criteria
+  const getDesignationName = (): string => {
+    console.log('getDesignationName called with:', {
+      currentFilterCriteria,
+      filterOptions,
+      designation: currentFilterCriteria?.designation
+    });
+    
+    if (!currentFilterCriteria?.designation || !filterOptions?.designations) {
+      console.log('Missing data - returning default');
+      return 'Position';
+    }
+    
+    const designationId = parseInt(currentFilterCriteria.designation);
+    const designation = filterOptions.designations.find(d => d.id === designationId);
+    
+    console.log('Found designation:', designation);
+    
+    return designation?.name || 'Position';
+  };
+
+  const handleNotificationSuccess = (message: string) => {
+    console.log('Notification sent successfully:', message);
+    
+    // Add candidate to notified list
+    if (selectedCandidateForNotification) {
+      setNotifiedCandidates(prev => new Set([...prev, selectedCandidateForNotification.user_id]));
+    }
+    
+    // Close the modal
+    setNotificationModalOpen(false);
+    setSelectedCandidateForNotification(null);
+    
+    // You can add a toast notification here if you have one
+  };
+
 
   const getProfessionalTitle = (workExperiences: Array<{title: string | null; company: string | null; start_date: Date | null; end_date: Date | null; is_current: boolean | null}>, currentPosition?: string | null): string => {
     // Get current position or most recent work experience title
@@ -312,6 +357,7 @@ export function CandidateResults({
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
@@ -322,34 +368,164 @@ export function CandidateResults({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Candidate
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Age
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Location
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Current Position
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Experience
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Expected Salary
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Education
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Skills
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Professional Qualification
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
           {candidates.map((candidate, index) => (
-            <Card 
+                <tr 
               key={`candidate-${candidate.user_id}-${index}`} 
-              className={`cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2 hover:border-emerald-300 ${
+                  className={`hover:bg-gray-50 ${
                 interestedCandidates.has(candidate.user_id) 
-                  ? 'border-green-300 bg-green-50' 
-                  : 'border-gray-200'
+                      ? 'bg-green-50' 
+                      : ''
               }`}
-              onClick={() => handleCardClick(candidate)}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
                   <div>
-                    <CardTitle className="text-lg font-semibold text-emerald-600">
+                        <div className="text-sm font-medium text-emerald-600">
                       Candidate {index + 1}
-                    </CardTitle>
-                    <p className="text-xs text-gray-500">ID: {candidate.user_id}</p>
                   </div>
                   {interestedCandidates.has(candidate.user_id) && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">
                       Selected
                     </span>
                   )}
                 </div>
-              </CardHeader>
-            </Card>
-          ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {calculateAge(candidate.date_of_birth)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div>
+                      <div>{candidate.city || 'Not specified'}</div>
+                      <div className="text-gray-500">{candidate.country || ''}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {getProfessionalTitle(candidate.work_experiences, candidate.current_position)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div>
+                      <div>{formatExperience(candidate.years_of_experience, candidate.total_years_experience)}</div>
+                      <div className="text-gray-500">{candidate.experience_level || ''}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatSalary(candidate.expected_salary_min, candidate.expected_salary_max, candidate.currency)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {getAcademicQualifications(candidate.educations)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <div className="flex flex-wrap gap-1">
+                      {candidate.skills.slice(0, 3).map((skill) => (
+                        <span
+                          key={skill.name}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"
+                        >
+                          {skill.name}
+                        </span>
+                      ))}
+                      {candidate.skills.length > 3 && (
+                        <span className="text-xs text-gray-500">
+                          +{candidate.skills.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {formatProfessionalQualification(candidate.professional_qualification)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {interestedCandidates.has(candidate.user_id) ? (
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleInterestToggle(candidate.user_id, false)}
+                          className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                        >
+                          Unselect
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => onViewProfile(candidate.user_id)}
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          View Profile
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewCandidate(candidate)}
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        >
+                          View
+                        </Button>
+                        {notifiedCandidates.has(candidate.user_id) ? (
+                          <Button
+                            size="sm"
+                            disabled
+                            className="bg-gray-400 text-white cursor-not-allowed"
+                          >
+                            Notified
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => handleNotifyCandidate(candidate)}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            Notify
+                          </Button>
+                        )}
+                        
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Pagination */}
@@ -379,259 +555,202 @@ export function CandidateResults({
           </div>
         )}
 
-        {/* Candidate Detail Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold">Candidate Details</h2>
-                  <button
-                    onClick={() => setIsModalOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                  >
-                    ×
-                  </button>
-                </div>
-            
-            {selectedCandidate && (
-              <div className="space-y-6">
-                {/* Basic Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Basic Information</h3>
-                    
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Age:</span>
-                        <span className="text-gray-900">{calculateAge(selectedCandidate.date_of_birth)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Location:</span>
-                        <span className="text-gray-900">{selectedCandidate.city || 'Not specified'}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Country:</span>
-                        <span className="text-gray-900">{selectedCandidate.country || 'Not specified'}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Industry:</span>
-                        <span className="text-gray-900">{selectedCandidate.industry || 'Not specified'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Professional Information</h3>
-                    
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Current Position:</span>
-                        <span className="text-gray-900">{selectedCandidate.current_position || 'Not specified'}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Experience Level:</span>
-                        <span className="text-gray-900">{selectedCandidate.experience_level || 'Not specified'}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Years of Experience:</span>
-                        <span className="text-gray-900">{formatExperience(selectedCandidate.years_of_experience, selectedCandidate.total_years_experience)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">Expected Salary:</span>
-                        <span className="text-gray-900">{formatSalary(selectedCandidate.expected_salary_min, selectedCandidate.expected_salary_max, selectedCandidate.currency)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Professional Qualifications */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Professional Qualifications</h3>
-                  <p className="text-gray-700">{getProfessionalQualifications(selectedCandidate.work_experiences, selectedCandidate.current_position)}</p>
-                </div>
-
-                                 {/* Education */}
-                 <div className="space-y-4">
-                   <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Education</h3>
-                   {selectedCandidate.educations.length > 0 ? (
-                     <div className="space-y-4">
-                       {selectedCandidate.educations.map((education, index) => (
-                         <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                           <div className="space-y-2">
-                             <h4 className="font-semibold text-gray-900">
-                               {education.degree_diploma || 'Degree not specified'}
-                             </h4>
-                             {education.field_of_study && (
-                               <p className="text-blue-600 font-medium">
-                                 {education.field_of_study}
-                               </p>
-                             )}
-                             {education.university_school && (
-                               <p className="text-sm text-gray-600">
-                                 {education.university_school}
-                               </p>
-                             )}
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   ) : (
-                     <p className="text-gray-700">No education information available</p>
-                   )}
-                 </div>
-
-                                 {/* Work Experience */}
-                 <div className="space-y-4">
-                   <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Work Experience</h3>
-                   {selectedCandidate.work_experiences.length > 0 ? (
-                    <div className="space-y-4">
-                      {selectedCandidate.work_experiences.map((experience, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h4 className="font-semibold text-gray-900">
-                                {experience.title || 'Position not specified'}
-                              </h4>
-                              <p className="text-emerald-600 font-medium">
-                                {experience.company || 'Company not specified'}
-                              </p>
-                            </div>
-                            {experience.is_current && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Current
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {experience.start_date && (
-                              <span>
-                                {new Date(experience.start_date).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  year: 'numeric' 
-                                })}
-                              </span>
-                            )}
-                            {experience.start_date && experience.end_date && (
-                              <span> - </span>
-                            )}
-                            {experience.end_date && !experience.is_current && (
-                              <span>
-                                {new Date(experience.end_date).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  year: 'numeric' 
-                                })}
-                              </span>
-                            )}
-                            {experience.is_current && (
-                              <span> - Present</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                                     ) : (
-                     <div className="space-y-3">
-                       <p className="text-gray-700 font-medium">No work experience records found</p>
-                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                         <div className="flex">
-                           <div className="flex-shrink-0">
-                             <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                             </svg>
-                           </div>
-                           <div className="ml-3">
-                             <div className=" text-sm text-yellow-700">
-                               <p className="">This candidate may not have added work experience details yet.</p>
-                             </div>
-                           </div>
-                         </div>
-                       </div>
-                     </div>
-                   )}
-                </div>
-
-                {/* Skills */}
-                {selectedCandidate.skills.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Skills</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCandidate.skills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800"
-                        >
-                          {skill.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Professional Summary */}
-                {selectedCandidate.professional_summary && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Professional Summary</h3>
-                    <p className="text-gray-700">{selectedCandidate.professional_summary}</p>
-                  </div>
-                )}
-
-                                 {/* Action Buttons */}
-                 <div className="flex justify-between items-center pt-4 border-t">
-                   
-                   {interestedCandidates.has(selectedCandidate.user_id) ? (
-                     <div className="flex items-center space-x-3">
-                       <span className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                         ✓ Selected
-                       </span>
-                       <Button
-                         variant="outline"
-                         onClick={async () => {
-                           await handleInterestToggle(selectedCandidate.user_id, false);
-                           setIsModalOpen(false);
-                         }}
-                         className="border-orange-300 text-orange-700 hover:bg-orange-50"
-                       >
-                         Unselect
-                       </Button>
-                     </div>
-                   ) : (
-                     <div className="flex space-x-3">
-                       <Button
-                         variant="destructive"
-                         onClick={() => {
-                           handleInterestToggle(selectedCandidate.user_id, false);
-                           setIsModalOpen(false);
-                         }}
-                         className="bg-red-600 hover:bg-red-700"
-                       >
-                         Reject
-                       </Button>
-                       <Button
-                         onClick={async () => {
-                           await handleInterestToggle(selectedCandidate.user_id, true);
-                           setIsModalOpen(false);
-                         }}
-                         className="bg-green-600 hover:bg-green-700"
-                       >
-                         Select
-                       </Button>
-                     </div>
-                   )}
-                 </div>
-              </div>
-            )}
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
+
+    {/* Candidate Details Modal */}
+    {isModalOpen && selectedCandidate && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Candidate Details</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Professional Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Professional Information</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Professional Title</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.title || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Current Position</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.current_position || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Industry</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.industry || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Experience Level</label>
+                  <p className="text-sm text-gray-900 capitalize">{selectedCandidate.experience_level || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Years of Experience in current position</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.years_of_experience || 0} years</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Total Years Experience in all positions</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.total_years_experience || 0} years</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Professional Qualification</label>
+                  <p className="text-sm text-gray-900">{formatProfessionalQualification(selectedCandidate.professional_qualification)}</p>
+                </div>
+              </div>
+
+              {/* Location & Availability */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Location & Availability</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Location</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.location || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Country</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.country || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">City</label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.city || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Availability Status</label>
+                  <p className="text-sm text-gray-900 capitalize">{selectedCandidate.availability_status || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Expected Salary Range</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedCandidate.expected_salary_min && selectedCandidate.expected_salary_max 
+                      ? `${selectedCandidate.expected_salary_min.toLocaleString()} - ${selectedCandidate.expected_salary_max.toLocaleString()} ${selectedCandidate.currency || 'LKR'}`
+                      : 'Not specified'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Professional Summary */}
+            {selectedCandidate.professional_summary && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Professional Summary</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">{selectedCandidate.professional_summary}</p>
+              </div>
+            )}
+
+            {/* Skills */}
+            {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCandidate.skills.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"
+                    >
+                      {skill.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Work Experience */}
+            {selectedCandidate.work_experiences && selectedCandidate.work_experiences.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Work Experience</h3>
+                <div className="space-y-4">
+                  {selectedCandidate.work_experiences.slice(0, 3).map((exp, index) => (
+                    <div key={index} className="border-l-4 border-emerald-200 pl-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{exp.title || 'Position not specified'}</h4>
+                          <p className="text-sm text-gray-600">{exp.company || 'Company not specified'}</p>
+                        </div>
+                        <div className="text-right text-sm text-gray-500">
+                          {exp.start_date && (
+                            <span>{new Date(exp.start_date).toLocaleDateString()}</span>
+                          )}
+                          {exp.end_date ? (
+                            <span> - {new Date(exp.end_date).toLocaleDateString()}</span>
+                          ) : exp.is_current ? (
+                            <span> - Present</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Education */}
+            {selectedCandidate.educations && selectedCandidate.educations.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Education</h3>
+                <div className="space-y-4">
+                  {selectedCandidate.educations.slice(0, 3).map((edu, index) => (
+                    <div key={index} className="border-l-4 border-green-200 pl-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900">{edu.degree_diploma || 'Degree not specified'}</h4>
+                        <p className="text-sm text-gray-600">{edu.field_of_study || 'Field not specified'}</p>
+                        <p className="text-sm text-gray-500">{edu.university_school || 'Institution not specified'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex justify-end space-x-3 mt-8 pt-6 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Notification Modal */}
+    {notificationModalOpen && selectedCandidateForNotification && (
+      <NotificationModal
+        isOpen={notificationModalOpen}
+        onClose={() => setNotificationModalOpen(false)}
+        candidateId={selectedCandidateForNotification.user_id}
+        candidateName={`Candidate ${candidates.findIndex(c => c.user_id === selectedCandidateForNotification.user_id) + 1}`}
+        designationName={getDesignationName()}
+        onSuccess={handleNotificationSuccess}
+      />
+    )}
+    </>
   );
 }

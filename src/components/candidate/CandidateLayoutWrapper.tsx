@@ -7,7 +7,7 @@ interface CandidateLayoutWrapperProps {
   children: React.ReactNode;
 }
 
-export function CandidateLayoutWrapper({ children }: CandidateLayoutWrapperProps) {
+export function CandidateLayoutWrapper({ children }: Readonly<CandidateLayoutWrapperProps>) {
   const pathname = usePathname();
   
   // Don't wrap auth pages with CandidateLayout

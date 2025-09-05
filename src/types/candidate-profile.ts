@@ -88,6 +88,8 @@ export interface BasicInfoSection {
   certifications?: string | null;
   awards?: string | null;
   volunteer_experience?: string | null;
+  professional_qualification?: string | null;
+  
   email?: string | null;
 }
 

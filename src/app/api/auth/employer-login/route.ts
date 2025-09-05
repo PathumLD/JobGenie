@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import type { UserLoginResponse, ApiErrorResponse } from '@/types/api';
+import { generateAccessToken } from '@/lib/jwt';
 
 const prisma = new PrismaClient();
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
     const { email, password } = validationResult.data;
 
     // Find user by email with employer profile and company details
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: { 
         email,
         role: 'employer' // Ensure only employers can login through this endpoint
@@ -97,6 +98,27 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
       data: { last_login_at: new Date() }
     });
 
+    // Generate JWT tokens
+    const jwtPayload = {
+      userId: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      role: user.role as 'candidate' | 'employer' | 'mis' | 'recruitment_agency',
+      userType: 'employer' as const
+    };
+
+    const accessToken = generateAccessToken(jwtPayload);
+
+    // Debug: Log JWT token and payload
+    console.log('🔑 Employer JWT Payload generated:');
+    console.log('👤 User ID:', jwtPayload.userId);
+    console.log('📧 Email:', jwtPayload.email);
+    console.log('🎭 Role:', jwtPayload.role);
+    console.log('🏷️ User Type:', jwtPayload.userType);
+    console.log('Generated JWT token:');
+    console.log('Access Token:', accessToken);
+
     // Create response with employer-specific data
     const response = NextResponse.json(
       {
@@ -134,7 +156,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
           created_at: user.employer.created_at,
           updated_at: user.employer.updated_at
         },
-        user_type: 'employer' as const
+        company: {
+          id: user.employer.company.id,
+          name: user.employer.company.name,
+          profile_created: user.employer.company.profile_created,
+          approval_status: user.employer.company.approval_status
+        },
+        user_type: 'employer' as const,
+        access_token: accessToken
       },
       { status: 200 }
     );
@@ -157,7 +186,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserLogin
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-      );
+    );
   } finally {
     await prisma.$disconnect();
   }

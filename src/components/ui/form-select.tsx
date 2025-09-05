@@ -33,7 +33,7 @@ const FormSelect = React.forwardRef<HTMLSelectElement, FormSelectProps>(
     const generatedId = React.useId();
     const selectId = id || (name ? `select-${name.replace(/[^a-zA-Z0-9]/g, '-')}` : `select-${generatedId}`);
     
-    const baseSelectClasses = "w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 appearance-none";
+    const baseSelectClasses = "w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200";
     
     const variantClasses = {
       default: "border-gray-300 bg-white hover:border-gray-400 focus:bg-white",
@@ -71,7 +71,6 @@ const FormSelect = React.forwardRef<HTMLSelectElement, FormSelectProps>(
             id={selectId}
             ref={ref}
             className={selectClasses}
-            defaultValue={props.defaultValue}
             {...props}
           >
             {placeholder && (
@@ -89,23 +88,6 @@ const FormSelect = React.forwardRef<HTMLSelectElement, FormSelectProps>(
               </option>
             ))}
           </select>
-          
-          {/* Custom dropdown arrow */}
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-            <svg 
-              className="w-4 h-4" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M19 9l-7 7-7-7" 
-              />
-            </svg>
-          </div>
         </div>
         
         {error && (

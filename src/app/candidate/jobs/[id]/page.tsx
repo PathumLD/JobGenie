@@ -44,7 +44,7 @@ interface JobDetail {
     culture_description: string | null;
     founded_year: number | null;
     social_media_links: any;
-    verification_status: string;
+    approval_status: string;
   } | null;
   customCompanyName: string | null;
   customCompanyEmail: string | null;

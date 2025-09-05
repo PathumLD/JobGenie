@@ -85,14 +85,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if company already exists with the same business registration number
-    const existingCompany = await prisma.company.findFirst({
+    const existingCompanyByRegNo = await prisma.company.findFirst({
       where: { business_registration_no }
     });
 
-    if (existingCompany) {
+    if (existingCompanyByRegNo) {
       return NextResponse.json({
         error: 'Company already exists',
         message: 'A company with this business registration number already exists'
+      }, { status: 409 });
+    }
+
+    // Check if company already exists with the same email
+    const existingCompanyByEmail = await prisma.company.findFirst({
+      where: { email }
+    });
+
+    if (existingCompanyByEmail) {
+      return NextResponse.json({
+        error: 'Company already exists',
+        message: 'A company with this email address already exists'
+      }, { status: 409 });
+    }
+
+    // Check if there's already an employer with this email (additional safety check)
+    const existingEmployer = await prisma.employer.findFirst({
+      where: {
+        user: {
+          email: email
+        }
+      }
+    });
+
+    if (existingEmployer) {
+      return NextResponse.json({
+        error: 'Employer already exists',
+        message: 'An employer account with this email already exists'
       }, { status: 409 });
     }
 
@@ -142,6 +170,7 @@ export async function POST(request: NextRequest) {
           industry,
           company_size: 'startup', // Default value
           company_type: 'corporation' // Default value
+          // profile_created defaults to false in schema
         }
       });
 
@@ -196,7 +225,7 @@ export async function POST(request: NextRequest) {
         industry: result.company.industry,
         company_size: result.company.company_size,
         company_type: result.company.company_type,
-        verification_status: result.company.verification_status,
+        approval_status: result.company.approval_status,
         created_at: result.company.created_at,
         updated_at: result.company.updated_at
       },

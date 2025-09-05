@@ -100,30 +100,40 @@ export async function GET(request: NextRequest): Promise<NextResponse<ProfileRes
       }
     }
 
-    return NextResponse.json(
-      {
-        message: 'Profile retrieved successfully',
-        user: {
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          address: user.address,
-          phone1: user.phone1,
-          phone2: user.phone2,
-          email: user.email,
-          role: user.role,
-          status: user.status,
-          email_verified: user.email_verified,
-          last_login_at: user.last_login_at,
-          created_at: user.created_at,
-          updated_at: user.updated_at,
-          is_created: user.is_created
-        },
-        profile: transformedProfile,
-        user_type: userType
+    // Prepare response data
+    const responseData: any = {
+      message: 'Profile retrieved successfully',
+      user: {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        address: user.address,
+        phone1: user.phone1,
+        phone2: user.phone2,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        email_verified: user.email_verified,
+        last_login_at: user.last_login_at,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        is_created: user.is_created
       },
-      { status: 200 }
-    );
+      profile: transformedProfile,
+      user_type: userType
+    };
+
+    // Add company information for employers
+    if (userType === 'employer' && user.employer?.company) {
+      responseData.company = {
+        id: user.employer.company.id,
+        name: user.employer.company.name,
+        industry: user.employer.company.industry,
+        approval_status: user.employer.company.approval_status
+      };
+    }
+
+    return NextResponse.json(responseData, { status: 200 });
 
   } catch (error) {
     console.error('Profile retrieval error:', error);

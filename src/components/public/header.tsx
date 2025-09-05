@@ -26,10 +26,12 @@ export const Header = ({ showSkipLink = false }: HeaderProps) => {
                         {/* Logo */}
                         <Link href="/">
                         <div className="flex items-center space-x-2 sm:space-x-3">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
-                                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2V6z" />
-                                </svg>
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden">
+                                <img 
+                                    src="/logo.jpg" 
+                                    alt="Job Genie Logo" 
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
                             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-emerald-900">Job Genie</h1>
                         </div>

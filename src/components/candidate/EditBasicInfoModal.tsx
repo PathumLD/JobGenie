@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { FormSelect } from '@/components/ui/form-select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { toast } from 'sonner';
-import { BasicInfoSection } from '@/types/candidate-profile';
+import { BasicInfoSection, JobDesignation, Industry, JobDesignationsResponse, IndustriesResponse } from '@/types/candidate-profile';
 import { authenticatedFetch } from '@/lib/auth-storage';
 
 interface EditBasicInfoModalProps {
@@ -75,6 +76,55 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
   onUpdate
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [jobDesignations, setJobDesignations] = useState<JobDesignation[]>([]);
+  const [industries, setIndustries] = useState<Industry[]>([]);
+
+  // Fetch job designations and industries when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log('Modal opened, fetching data...');
+      fetchJobDesignations();
+      fetchIndustries();
+    }
+  }, [isOpen]);
+
+  // Debug effect to log when data changes
+  useEffect(() => {
+    console.log('Job designations updated:', jobDesignations.length, 'items');
+    console.log('Industries updated:', industries.length, 'items');
+  }, [jobDesignations, industries]);
+
+  const fetchJobDesignations = async () => {
+    try {
+      console.log('Fetching job designations...');
+      const response = await fetch('/api/candidate/job-designations');
+      if (response.ok) {
+        const data: JobDesignationsResponse = await response.json();
+        console.log('Job designations fetched:', data.data.length, 'items');
+        setJobDesignations(data.data);
+      } else {
+        console.error('Failed to fetch job designations, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching job designations:', error);
+    }
+  };
+
+  const fetchIndustries = async () => {
+    try {
+      console.log('Fetching industries...');
+      const response = await fetch('/api/candidate/industries');
+      if (response.ok) {
+        const data: IndustriesResponse = await response.json();
+        console.log('Industries fetched:', data.data.length, 'items');
+        setIndustries(data.data);
+      } else {
+        console.error('Failed to fetch industries, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching industries:', error);
+    }
+  };
   
   const methods = useForm<EditBasicInfoFormData>({
     defaultValues: {
@@ -277,13 +327,43 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
                 label="Professional Title *"
                 {...methods.register('title', { required: true })}
               />
-              <FormInput
+              <SearchableSelect
                 label="Current Position"
-                {...methods.register('current_position')}
+                placeholder="Search and select current position..."
+                value={methods.watch('current_position') || ''}
+                onChange={(value) => methods.setValue('current_position', value)}
+                options={(() => {
+                  const options = jobDesignations.map(designation => ({
+                    value: designation.name,
+                    label: designation.name
+                  }));
+                  // Remove duplicates based on value
+                  const uniqueOptions = options.filter((option, index, self) => 
+                    index === self.findIndex(o => o.value === option.value)
+                  );
+                  console.log('Current Position options:', uniqueOptions.length, 'items (after deduplication)');
+                  return uniqueOptions;
+                })()}
+                className="w-full"
               />
-              <FormInput
+              <SearchableSelect
                 label="Industry"
-                {...methods.register('industry')}
+                placeholder="Search and select industry..."
+                value={methods.watch('industry') || ''}
+                onChange={(value) => methods.setValue('industry', value)}
+                options={(() => {
+                  const options = industries.map(industry => ({
+                    value: industry.description,
+                    label: industry.description
+                  }));
+                  // Remove duplicates based on value
+                  const uniqueOptions = options.filter((option, index, self) => 
+                    index === self.findIndex(o => o.value === option.value)
+                  );
+                  console.log('Industry options:', uniqueOptions.length, 'items (after deduplication)');
+                  return uniqueOptions;
+                })()}
+                className="w-full"
               />
               <FormInput
                 label="Location *"
@@ -326,7 +406,7 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
             {/* Experience and Availability */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormInput
-                label="Years of Experience"
+                label="Years of Experience in current position"
                 type="number"
                 {...methods.register('years_of_experience', { valueAsNumber: true })}
               />
@@ -373,18 +453,6 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
                 {...methods.register('availability_date')}
               />
               <FormSelect
-                label="Work Authorization"
-                {...methods.register('work_authorization')}
-                options={[
-                  { value: '', label: 'Select Work Authorization' },
-                  { value: 'citizen', label: 'Citizen' },
-                  { value: 'permanent_resident', label: 'Permanent Resident' },
-                  { value: 'work_visa', label: 'Work Visa' },
-                  { value: 'requires_sponsorship', label: 'Requires Sponsorship' },
-                  { value: 'other', label: 'Other' }
-                ]}
-              />
-              <FormSelect
                 label="Work Availability"
                 {...methods.register('work_availability')}
                 options={[
@@ -396,39 +464,11 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
                   { value: 'volunteer', label: 'Volunteer' }
                 ]}
               />
-              <FormInput
-                label="Notice Period (Days)"
-                type="number"
-                {...methods.register('notice_period', { valueAsNumber: true })}
-              />
             </div>
 
             {/* Additional Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput
-                label="Date of Birth"
-                type="date"
-                {...methods.register('date_of_birth')}
-              />
-              <FormSelect
-                label="Gender"
-                {...methods.register('gender')}
-                options={[
-                  { value: '', label: 'Select Gender' },
-                  { value: 'male', label: 'Male' },
-                  { value: 'female', label: 'Female' },
-                  { value: 'other', label: 'Other' },
-                  { value: 'prefer_not_to_say', label: 'Prefer Not to Say' }
-                ]}
-              />
-              <FormInput
-                label="NIC (National Identity Card)"
-                {...methods.register('nic')}
-              />
-              <FormInput
-                label="Passport Number"
-                {...methods.register('passport')}
-              />
+              
               <FormInput
                 label="Expected Minimum Salary (LKR)"
                 type="number"
@@ -442,29 +482,10 @@ export const EditBasicInfoModal: React.FC<EditBasicInfoModalProps> = ({
             </div>
 
             <div className="space-y-4">
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                <textarea
-                  {...methods.register('bio')}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="Brief professional summary"
-                />
-              </div> */}
-              
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">About</label>
-                <textarea
-                  {...methods.register('about')}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="Tell us about yourself"
-                />
-              </div> */}
-              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Professional Summary</label>
+                <label htmlFor="professional_summary" className="block text-sm font-medium text-gray-700 mb-2">Professional Summary</label>
                 <textarea
+                  id="professional_summary"
                   {...methods.register('professional_summary')}
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"

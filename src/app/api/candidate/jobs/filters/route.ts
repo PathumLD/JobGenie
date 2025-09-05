@@ -395,7 +395,7 @@ async function generateSearchSuggestions() {
 
     // Get company suggestions
     const companySuggestions = await prisma.company.findMany({
-      where: { verification_status: 'verified' },
+      where: { approval_status: 'approved' },
       orderBy: { name: 'asc' },
       take: 20,
       select: { name: true }

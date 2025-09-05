@@ -295,3 +295,34 @@ export interface CandidateProfileErrorResponse {
     path: (string | number)[];
   }>;
 }
+
+// Job Designation Types
+export interface JobDesignation {
+  id: number;
+  name: string;
+  isco_08_unit: number;
+  isco_08_major: number;
+  isco_08_major_label: string;
+}
+
+export interface JobDesignationsResponse {
+  success: boolean;
+  data: JobDesignation[];
+  message?: string;
+}
+
+// Industry Types (ISCO08)
+export interface Industry {
+  unit: number;
+  description: string;
+  major: number;
+  major_label: string;
+  sub_major: number;
+  sub_major_label: string;
+}
+
+export interface IndustriesResponse {
+  success: boolean;
+  data: Industry[];
+  message?: string;
+}

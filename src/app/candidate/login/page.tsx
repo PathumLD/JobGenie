@@ -5,7 +5,7 @@ import { Header } from '@/components/public/header';
 
 export default function CandidateLoginPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100">
       <OAuthSessionHandler />
       <Header showSkipLink={true} />
       

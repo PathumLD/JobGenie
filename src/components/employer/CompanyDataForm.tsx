@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface CompanyData {
   company_name: string;
@@ -12,13 +13,20 @@ interface CompanyData {
 }
 
 interface CompanyDataFormProps {
-  data: CompanyData;
-  onSubmit: (data: CompanyData) => void;
-  isLoading: boolean;
+  readonly data: CompanyData;
+  readonly onSubmit: (data: CompanyData) => void;
+  readonly isLoading: boolean;
 }
 
 interface FormErrors {
   [key: string]: string;
+}
+
+interface DocumentValidationResult {
+  companyNameMatch: boolean;
+  registrationNoMatch: boolean;
+  canProceed: boolean;
+  mismatches: string[];
 }
 
 const INDUSTRIES = [
@@ -44,6 +52,8 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
   const [formData, setFormData] = useState<CompanyData>(data);
   const [errors, setErrors] = useState<FormErrors>({});
   const [dragActive, setDragActive] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [validationResult, setValidationResult] = useState<DocumentValidationResult | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -52,6 +62,64 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    // Clear validation result when form data changes
+    if (validationResult) {
+      setValidationResult(null);
+    }
+  };
+
+  const analyzeDocument = async (file: File) => {
+    if (!formData.company_name.trim() || !formData.business_registration_no.trim()) {
+      setErrors(prev => ({
+        ...prev,
+        business_registration_certificate: 'Please fill in company name and registration number first'
+      }));
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setValidationResult(null);
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('companyName', formData.company_name);
+      formDataToSend.append('businessRegistrationNo', formData.business_registration_no);
+      formDataToSend.append('documentFile', file);
+
+      const response = await fetch('/api/employer/document-analysis', {
+        method: 'POST',
+        body: formDataToSend
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Analysis failed');
+      }
+
+      if (result.success && result.validationResult) {
+        setValidationResult(result.validationResult);
+        
+        if (!result.validationResult.canProceed) {
+          setErrors(prev => ({
+            ...prev,
+            business_registration_certificate: 'Document validation failed. Please check the mismatches below.'
+          }));
+        } else {
+          // Clear any existing errors
+          setErrors(prev => ({ ...prev, business_registration_certificate: '' }));
+        }
+      }
+    } catch (error) {
+      console.error('Document analysis error:', error);
+      setErrors(prev => ({
+        ...prev,
+        business_registration_certificate: 'Failed to analyze document. Please try again.'
+      }));
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -62,6 +130,9 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
       if (errors.business_registration_certificate) {
         setErrors(prev => ({ ...prev, business_registration_certificate: '' }));
       }
+      
+      // Automatically analyze the document
+      analyzeDocument(file);
     }
   };
 
@@ -81,11 +152,14 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
     setDragActive(false);
     
     const files = e.dataTransfer.files;
-    if (files && files[0]) {
+    if (files?.[0]) {
       setFormData(prev => ({ ...prev, business_registration_certificate: files[0] }));
       if (errors.business_registration_certificate) {
         setErrors(prev => ({ ...prev, business_registration_certificate: '' }));
       }
+      
+      // Automatically analyze the document
+      analyzeDocument(files[0]);
     }
   };
 
@@ -106,6 +180,8 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
 
     if (!formData.business_registration_certificate) {
       newErrors.business_registration_certificate = 'Business registration certificate is required';
+    } else if (validationResult && !validationResult.canProceed) {
+      newErrors.business_registration_certificate = 'Document validation failed. Please check the mismatches below.';
     }
 
     if (!formData.business_registered_address.trim()) {
@@ -132,7 +208,9 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
            formData.business_registration_no.trim() !== '' &&
            formData.business_registration_certificate !== null &&
            formData.business_registered_address.trim() !== '' &&
-           formData.industry !== '';
+           formData.industry !== '' &&
+           (!validationResult || validationResult.canProceed) &&
+           !isAnalyzing;
   };
 
   return (
@@ -233,7 +311,7 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="business_registration_certificate" className="block text-sm font-medium text-gray-700 mb-2">
             Business Registration Certificate *
           </label>
           <div
@@ -244,6 +322,13 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                document.getElementById('business_registration_certificate')?.click();
+              }
+            }}
           >
             <input
               type="file"
@@ -254,6 +339,7 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
               className="hidden"
             />
             <label htmlFor="business_registration_certificate" className="cursor-pointer">
+              <span className="sr-only">Upload business registration certificate</span>
               <div className="space-y-2">
                 <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -278,6 +364,60 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
               {formData.business_registration_certificate.name}
             </div>
           )}
+
+          {/* Document Analysis Status */}
+          {isAnalyzing && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-center">
+                <LoadingSpinner size="sm" />
+                <span className="ml-2 text-sm text-blue-700">
+                  Analyzing document... This may take a few moments.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Validation Results */}
+          {validationResult && !isAnalyzing && (
+            <div className={`mt-3 p-3 rounded-md border ${
+              validationResult.canProceed 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-red-50 border-red-200'
+            }`}>
+              <div className="flex items-start">
+                {validationResult.canProceed ? (
+                  <svg className="h-5 w-5 text-green-500 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5 text-red-500 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                )}
+                <div className="flex-1">
+                  <p className={`text-sm font-medium ${
+                    validationResult.canProceed ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    {validationResult.canProceed 
+                      ? 'Document validation successful!' 
+                      : 'Document validation failed'
+                    }
+                  </p>
+                  {validationResult.mismatches.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-sm text-red-700 font-medium">Mismatches found:</p>
+                      <ul className="mt-1 text-sm text-red-600 list-disc list-inside">
+                        {validationResult.mismatches.map((mismatch, index) => (
+                          <li key={`mismatch-${index}`}>{mismatch}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {errors.business_registration_certificate && (
             <p className="mt-1 text-sm text-red-600">{errors.business_registration_certificate}</p>
           )}
@@ -290,7 +430,12 @@ export function CompanyDataForm({ data, onSubmit, isLoading }: CompanyDataFormPr
           disabled={!isFormValid() || isLoading}
           className="px-6 py-2"
         >
-          {isLoading ? 'Processing...' : 'Continue to Employer Information'}
+          {(() => {
+            if (isLoading) return 'Processing...';
+            if (isAnalyzing) return 'Analyzing Document...';
+            if (validationResult && !validationResult.canProceed) return 'Fix Document Issues';
+            return 'Continue to Employer Information';
+          })()}
         </Button>
       </div>
     </form>

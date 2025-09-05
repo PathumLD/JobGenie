@@ -24,12 +24,12 @@ export async function uploadBusinessRegistration(
     // Generate unique filename
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop();
-    const fileName = `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_${userId}_${timestamp}.${fileExtension}`;
+    const fileName = `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.${fileExtension}`;
     
-    // Upload file to Supabase storage
+    // Upload file to Supabase storage in employer-specific directory
     const { error } = await supabase.storage
       .from(BUSINESS_REGISTRATION_BUCKET)
-      .upload(fileName, file, {
+      .upload(`${userId}/${fileName}`, file, {
         cacheControl: '3600',
         upsert: false
       });
@@ -44,7 +44,7 @@ export async function uploadBusinessRegistration(
     // Get public URL for the uploaded file
     const { data: urlData } = supabase.storage
       .from(BUSINESS_REGISTRATION_BUCKET)
-      .getPublicUrl(fileName);
+      .getPublicUrl(`${userId}/${fileName}`);
 
     return urlData.publicUrl;
   } catch (error) {
@@ -63,10 +63,11 @@ export async function ensureBucketExists(): Promise<void> {
       throw new Error(`Failed to list buckets: ${listError.message}`);
     }
 
-    const bucketExists = buckets?.some(bucket => bucket.name === BUSINESS_REGISTRATION_BUCKET);
+    // Check and create business registration bucket
+    const businessRegBucketExists = buckets?.some(bucket => bucket.name === BUSINESS_REGISTRATION_BUCKET);
     
-    if (!bucketExists) {
-      // Create the bucket
+    if (!businessRegBucketExists) {
+      // Create the business registration bucket
       const { error: createError } = await supabase.storage.createBucket(BUSINESS_REGISTRATION_BUCKET, {
         public: true, // Make files publicly accessible
         allowedMimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png'], // Allow common document types
@@ -74,14 +75,36 @@ export async function ensureBucketExists(): Promise<void> {
       });
 
       if (createError) {
-        throw new Error(`Failed to create bucket: ${createError.message}`);
+        throw new Error(`Failed to create business registration bucket: ${createError.message}`);
       }
 
       console.log(`Storage bucket '${BUSINESS_REGISTRATION_BUCKET}' created successfully`);
     }
+
+    // Check and create company logo bucket
+    const companyLogoBucketExists = buckets?.some(bucket => bucket.name === COMPANY_LOGO_BUCKET);
+    
+    if (!companyLogoBucketExists) {
+      console.log(`📦 Creating storage bucket: ${COMPANY_LOGO_BUCKET}`);
+      // Create the company logo bucket
+      const { error: createError } = await supabase.storage.createBucket(COMPANY_LOGO_BUCKET, {
+        public: true, // Make files publicly accessible
+        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'], // Allow image types only
+        fileSizeLimit: 5242880 // 5MB limit
+      });
+
+      if (createError) {
+        console.error(`❌ Failed to create company logo bucket:`, createError);
+        throw new Error(`Failed to create company logo bucket: ${createError.message}`);
+      }
+
+      console.log(`✅ Storage bucket '${COMPANY_LOGO_BUCKET}' created successfully`);
+    } else {
+      console.log(`✅ Storage bucket '${COMPANY_LOGO_BUCKET}' already exists`);
+    }
   } catch (error) {
     console.error('Bucket creation error:', error);
-    throw new Error('Failed to ensure storage bucket exists');
+    throw new Error('Failed to ensure storage buckets exist');
   }
 }
 
@@ -103,30 +126,48 @@ export async function uploadCompanyLogo(
       throw new Error('File size too large. Maximum size is 5MB.');
     }
 
+    // Convert file to buffer (following candidate profile image approach)
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
     // Generate unique filename
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop();
     const fileName = `logo_${timestamp}.${fileExtension}`;
+    const filePath = `${companyId}/${fileName}`;
+    
+    console.log(`📤 Uploading company logo:`, {
+      bucket: COMPANY_LOGO_BUCKET,
+      filePath,
+      fileType: file.type,
+      fileSize: file.size,
+      companyId
+    });
     
     // Upload file to company-specific directory
     const { error } = await supabase.storage
       .from(COMPANY_LOGO_BUCKET)
-      .upload(`${companyId}/${fileName}`, file, {
-        cacheControl: '3600',
-        upsert: false
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: true, // Allow overwriting existing files
       });
 
     if (error) {
+      console.error('❌ Supabase upload error:', error);
       if (error.message.includes('Bucket not found')) {
         throw new Error(`Storage bucket '${COMPANY_LOGO_BUCKET}' not found. Please create it in your Supabase dashboard under Storage > Buckets.`);
       }
       throw new Error(`Upload failed: ${error.message}`);
     }
 
+    console.log(`✅ Company logo uploaded successfully to: ${filePath}`);
+
     // Get public URL for the uploaded file
     const { data: urlData } = supabase.storage
       .from(COMPANY_LOGO_BUCKET)
-      .getPublicUrl(`${companyId}/${fileName}`);
+      .getPublicUrl(filePath);
+
+    console.log(`🔗 Company logo public URL: ${urlData.publicUrl}`);
 
     return urlData.publicUrl;
   } catch (error) {
@@ -161,15 +202,24 @@ export async function deleteCompanyLogo(fileUrl: string, companyId: string): Pro
 // Function to delete business registration document
 export async function deleteBusinessRegistration(fileUrl: string): Promise<void> {
   try {
-    // Extract filename from URL
-    const fileName = fileUrl.split('/').pop();
-    if (!fileName) {
-      throw new Error('Invalid file URL');
+    // Extract the path from URL (includes employer ID directory)
+    const urlParts = fileUrl.split('/');
+    const bucketIndex = urlParts.findIndex(part => part === BUSINESS_REGISTRATION_BUCKET);
+    
+    if (bucketIndex === -1 || bucketIndex + 1 >= urlParts.length) {
+      throw new Error('Invalid file URL structure');
+    }
+    
+    // Get the path after the bucket name (employerId/filename)
+    const filePath = urlParts.slice(bucketIndex + 1).join('/');
+    
+    if (!filePath) {
+      throw new Error('Invalid file path');
     }
 
     const { error } = await supabase.storage
       .from(BUSINESS_REGISTRATION_BUCKET)
-      .remove([fileName]);
+      .remove([filePath]);
 
     if (error) {
       throw new Error(`Delete failed: ${error.message}`);

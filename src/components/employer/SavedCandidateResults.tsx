@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ScheduleInterviewModal } from './ScheduleInterviewModal';
 
 interface SavedCandidate {
   user_id: string;
@@ -65,6 +66,8 @@ export function SavedCandidateResults({
 }: SavedCandidateResultsProps) {
   const [selectedCandidate, setSelectedCandidate] = useState<SavedCandidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const calculateAge = (dateOfBirth: Date | null): string => {
     if (!dateOfBirth) return 'Not specified';
@@ -113,20 +116,25 @@ export function SavedCandidateResults({
     return uniqueTitles.length > 0 ? uniqueTitles.join(', ') : 'Not specified';
   };
 
-  const getAcademicQualifications = (educations: Array<{degree_diploma: string | null; field_of_study: string | null; university_school: string | null}>): string => {
-    if (educations.length === 0) return 'Not specified';
-    
-    const qualifications = educations
-      .map(edu => edu.degree_diploma || edu.field_of_study)
-      .filter(Boolean)
-      .filter((value, index, self) => self.indexOf(value) === index);
-    
-    return qualifications.length > 0 ? qualifications.join(', ') : 'Not specified';
-  };
 
   const handleCardClick = (candidate: SavedCandidate) => {
     setSelectedCandidate(candidate);
     setIsModalOpen(true);
+  };
+
+  const handleScheduleInterview = () => {
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleScheduleSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setIsScheduleModalOpen(false);
+    // Auto-hide success message after 5 seconds
+    setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const handleCloseScheduleModal = () => {
+    setIsScheduleModalOpen(false);
   };
 
   if (loading) {
@@ -179,7 +187,7 @@ export function SavedCandidateResults({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {candidates.map((candidate, index) => (
             <Card 
-              key={`candidate-${candidate.user_id}-${index}`} 
+              key={candidate.user_id} 
               className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2 border-green-300 bg-green-50 hover:border-green-400"
               onClick={() => handleCardClick(candidate)}
             >
@@ -234,12 +242,20 @@ export function SavedCandidateResults({
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold">Candidate Details</h2>
-                  <button
-                    onClick={() => setIsModalOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                  >
-                    ×
-                  </button>
+                  <div className="flex items-center space-x-3">
+                    <Button
+                      onClick={handleScheduleInterview}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Schedule Interview
+                    </Button>
+                    <button
+                      onClick={() => setIsModalOpen(false)}
+                      className="text-gray-400 hover:text-gray-600 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
              
                 {selectedCandidate && (
@@ -311,7 +327,7 @@ export function SavedCandidateResults({
                       {selectedCandidate.educations.length > 0 ? (
                         <div className="space-y-4">
                           {selectedCandidate.educations.map((education, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div key={`education-${index}-${education.degree_diploma}-${education.university_school}`} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-gray-900">
                                   {education.degree_diploma || 'Degree not specified'}
@@ -341,7 +357,7 @@ export function SavedCandidateResults({
                       {selectedCandidate.work_experiences.length > 0 ? (
                         <div className="space-y-4">
                           {selectedCandidate.work_experiences.map((experience, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div key={`experience-${index}-${experience.company}-${experience.title}`} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                               <div className="flex justify-between items-start mb-2">
                                 <div>
                                   <h4 className="font-semibold text-gray-900">
@@ -410,9 +426,9 @@ export function SavedCandidateResults({
                       <div className="space-y-4">
                         <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Skills</h3>
                         <div className="flex flex-wrap gap-2">
-                          {selectedCandidate.skills.map((skill, index) => (
+                          {selectedCandidate.skills.map((skill) => (
                             <span
-                              key={index}
+                              key={`skill-${skill.name}`}
                               className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800"
                             >
                               {skill.name}
@@ -432,6 +448,29 @@ export function SavedCandidateResults({
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Schedule Interview Modal */}
+        {selectedCandidate && (
+          <ScheduleInterviewModal
+            isOpen={isScheduleModalOpen}
+            onClose={handleCloseScheduleModal}
+            candidateId={selectedCandidate.user_id}
+            candidateName={`${selectedCandidate.first_name || ''} ${selectedCandidate.last_name || ''}`.trim() || 'Candidate'}
+            onSuccess={handleScheduleSuccess}
+          />
+        )}
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm font-medium">{successMessage}</span>
             </div>
           </div>
         )}

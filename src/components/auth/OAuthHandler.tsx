@@ -30,9 +30,44 @@ export function OAuthHandler() {
             if (profileCheckResponse.ok) {
               const profileData = await profileCheckResponse.json();
               if (profileData.success && profileData.isProfileComplete) {
-                // Profile is complete, redirect to jobs page
-                console.log('✅ Profile complete, redirecting to jobs page...');
-                router.push('/candidate/jobs');
+                // Profile is complete, now check for CV before redirecting
+                console.log('✅ Profile complete, checking for CV...');
+                
+                try {
+                  const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                  });
+
+                  if (resumeCheckResponse.ok) {
+                    const resumeData = await resumeCheckResponse.json();
+                    if (resumeData.success) {
+                      if (resumeData.hasResumes) {
+                        // CV exists, redirect to jobs page
+                        console.log('✅ CV found, redirecting to jobs page...');
+                        router.push('/candidate/jobs');
+                      } else {
+                        // No CV, redirect to CV extraction page
+                        console.log('⚠️ No CV found, redirecting to CV extraction page...');
+                        router.push('/candidate/cv-extraction');
+                      }
+                    } else {
+                      console.error('Resume check failed:', resumeData.error);
+                      // If check fails, redirect to CV extraction page
+                      router.push('/candidate/cv-extraction');
+                    }
+                  } else {
+                    console.error('Resume check request failed');
+                    // If request fails, redirect to CV extraction page
+                    router.push('/candidate/cv-extraction');
+                  }
+                } catch (resumeError) {
+                  console.error('Error checking resume existence:', resumeError);
+                  // If error occurs, redirect to CV extraction page
+                  router.push('/candidate/cv-extraction');
+                }
               } else {
                 // Profile incomplete, redirect to complete profile page
                 console.log('⚠️ Profile incomplete, redirecting to complete profile page...');

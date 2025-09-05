@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, type Company, type CompanySize, type CompanyType, type ApprovalStatus } from '@prisma/client';
+import { PrismaClient, type Company } from '@prisma/client';
 import { z } from 'zod';
 import type { 
   CompanyProfileResponse, 
@@ -9,7 +9,7 @@ import type {
   CompanyProfile
 } from '@/types/company-profile';
 import { verifyToken } from '@/lib/jwt';
-import { uploadCompanyLogo } from '@/lib/supabase';
+import { uploadCompanyLogo, ensureBucketExists } from '@/lib/supabase';
 
 const prisma = new PrismaClient();
 
@@ -79,6 +79,7 @@ const companyProfileUpdateSchema = z.object({
   company_type: z.enum(['startup', 'corporation', 'agency', 'non_profit', 'government']),
   slug: z.string().min(1, 'Company slug is required').max(200, 'Slug must be less than 200 characters'),
   industry: z.string().min(1, 'Industry is required').max(100, 'Industry must be less than 100 characters'),
+  logo: z.custom<File>((val) => val && typeof val === 'object' && 'name' in val && 'size' in val && 'type' in val, { message: 'Invalid logo file' }).optional(),
   social_media_links: z.object({
     linkedin: z.string().url().optional().or(z.literal(''))
   }).optional()
@@ -244,6 +245,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompanyPr
       );
     }
 
+    // Ensure storage buckets exist
+    await ensureBucketExists();
+
     // Upload logo if provided
     let logoUrl = null;
     if (profileData.logo && profileData.logo.size > 0) {
@@ -266,6 +270,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompanyPr
         industry: profileData.industry,
         logo_url: logoUrl,
         social_media_links: profileData.social_media_links || undefined,
+        profile_created: true,
         updated_at: new Date()
       }
     });
@@ -334,6 +339,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse<CompanyPro
     const slug = formData.get('slug') as string;
     const industry = formData.get('industry') as string;
     const linkedin = formData.get('linkedin') as string;
+    const logo = formData.get('logo') as File;
 
     // Validate the data
     const validationResult = companyProfileUpdateSchema.safeParse({
@@ -347,6 +353,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse<CompanyPro
       company_type,
       slug,
       industry,
+      logo,
       social_media_links: {
         linkedin
       }
@@ -384,6 +391,14 @@ export async function PUT(request: NextRequest): Promise<NextResponse<CompanyPro
       );
     }
 
+    // Ensure storage buckets exist
+    await ensureBucketExists();
+
+    // Upload logo if provided
+    let logoUrl = null;
+    if (profileData.logo && profileData.logo.size > 0) {
+      logoUrl = await uploadCompanyLogo(profileData.logo, employer.company.id);
+    }
 
     // Update company profile
     const updatedCompany = await prisma.company.update({
@@ -399,6 +414,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse<CompanyPro
         company_type: profileData.company_type,
         slug: profileData.slug,
         industry: profileData.industry,
+        logo_url: logoUrl,
         social_media_links: profileData.social_media_links || undefined,
         updated_at: new Date()
       }

@@ -98,7 +98,7 @@ export function CandidateLoginForm() {
       } else {
         // If no token, default to CV extraction page
         console.log('No token available, redirecting to CV extraction page');
-        router.push('/candidate/cv-extraction');
+        router.push('/candidate/login');
       }
     } catch (error) {
       console.error('Error checking resume existence:', error);

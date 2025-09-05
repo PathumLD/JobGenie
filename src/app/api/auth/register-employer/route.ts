@@ -131,34 +131,44 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(validatedPassword, 12);
 
     // Generate email verification token
-    const verificationToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
     const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Create user, company, and employer records in a transaction
-    const result = await prisma.$transaction(async (prismaClient: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>) => {
-      // Create user record
-      const user = await prismaClient.user.create({
-        data: {
-          first_name,
-          last_name,
-          email,
-          password: hashedPassword,
-          role: 'employer',
-          status: 'pending_verification',
-          email_verified: false,
-          email_verification_token: verificationToken,
-          verification_token_expires_at: tokenExpiresAt,
-          is_created: true
-        }
-      });
+    // Create user record first
+    const user = await prisma.user.create({
+      data: {
+        first_name,
+        last_name,
+        email,
+        password: hashedPassword,
+        role: 'employer',
+        status: 'pending_verification',
+        email_verified: false,
+        email_verification_token: verificationToken,
+        verification_token_expires_at: tokenExpiresAt,
+        is_created: true
+      }
+    });
 
-      // Upload business registration certificate to Supabase
-      const businessRegistrationUrl = await uploadBusinessRegistration(
+    let businessRegistrationUrl: string;
+    try {
+      // Upload business registration certificate to Supabase (outside transaction)
+      businessRegistrationUrl = await uploadBusinessRegistration(
         certificateFile,
         company_name,
         user.id
       );
+    } catch (uploadError) {
+      console.error('Failed to upload business registration certificate:', uploadError);
+      // Clean up the user record if file upload fails
+      await prisma.user.delete({
+        where: { id: user.id }
+      });
+      throw new Error('Failed to upload business registration certificate. Please try again.');
+    }
 
+    // Create company and employer records in a transaction
+    const result = await prisma.$transaction(async (prismaClient: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>) => {
       // Create company record
       const company = await prismaClient.company.create({
         data: {
@@ -192,11 +202,22 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
+      console.log('📧 Sending verification email to:', email);
+      console.log('🔑 Verification token:', verificationToken);
+      
       const transporter = createTransporter();
       const mailOptions = createVerificationEmail(email, verificationToken, first_name);
-      await transporter.sendMail(mailOptions);
+      
+      console.log('📧 Email configuration:', {
+        from: mailOptions.from,
+        to: mailOptions.to,
+        subject: mailOptions.subject
+      });
+      
+      const emailResult = await transporter.sendMail(mailOptions);
+      console.log('✅ Verification email sent successfully:', emailResult.messageId);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
+      console.error('❌ Failed to send verification email:', emailError);
       // Don't fail the registration if email fails
     }
 

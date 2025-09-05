@@ -33,6 +33,7 @@ interface FilteredCandidate {
   location: string | null;
   profile_image_url: string | null;
   professional_summary: string | null;
+  professional_qualification: string | null;
   created_at: Date | null;
   date_of_birth: Date | null;
   educations: Array<{
@@ -68,6 +69,8 @@ export default function FindCandidatesPage() {
   const [candidates, setCandidates] = useState<FilteredCandidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
+  const [currentFilterCriteria, setCurrentFilterCriteria] = useState<FilterCriteria | null>(null);
+  const [filterOptions, setFilterOptions] = useState<any>(null);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -130,6 +133,7 @@ export default function FindCandidatesPage() {
   };
 
   const handleFilter = (criteria: FilterCriteria) => {
+    setCurrentFilterCriteria(criteria);
     searchCandidates(criteria, 1);
   };
 
@@ -137,6 +141,12 @@ export default function FindCandidatesPage() {
     setCandidates([]);
     setPagination({ total: 0, page: 1, totalPages: 0 });
     setSearchPerformed(false);
+    setCurrentFilterCriteria(null);
+  };
+
+  const handleFilterOptionsLoaded = (options: any) => {
+    console.log('Find candidates page received filter options:', options);
+    setFilterOptions(options);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -163,42 +173,43 @@ export default function FindCandidatesPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Filter Sidebar */}
-            <div className="lg:col-span-1">
-              <CandidateFilter
-                onFilter={handleFilter}
-                onClear={handleClear}
-                loading={loading}
-              />
-            </div>
+          {/* Horizontal Filter Section */}
+          <div className="mb-8">
+            <CandidateFilter
+              onFilter={handleFilter}
+              onClear={handleClear}
+              loading={loading}
+              onFilterOptionsLoaded={handleFilterOptionsLoaded}
+            />
+          </div>
 
-            {/* Results */}
-            <div className="lg:col-span-2">
-              {!searchPerformed ? (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                  <div className="text-gray-400 mb-4">
-                    <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to find great talent?</h3>
-                  <p className="text-gray-500">
-                    Use the filters on the left to search for candidates that match your requirements.
-                  </p>
+          {/* Results Section */}
+          <div>
+            {!searchPerformed ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center">
+                <div className="text-gray-400 mb-4">
+                  <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
-              ) : (
-                <CandidateResults
-                  candidates={candidates}
-                  total={pagination.total}
-                  page={pagination.page}
-                  totalPages={pagination.totalPages}
-                  loading={loading}
-                  onPageChange={handlePageChange}
-                  onViewProfile={handleViewProfile}
-                />
-              )}
-            </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to find great talent?</h3>
+                <p className="text-gray-500">
+                  Use the filters above to search for candidates that match your requirements.
+                </p>
+              </div>
+            ) : (
+              <CandidateResults
+                candidates={candidates}
+                total={pagination.total}
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                loading={loading}
+                onPageChange={handlePageChange}
+                onViewProfile={handleViewProfile}
+                currentFilterCriteria={currentFilterCriteria}
+                filterOptions={filterOptions}
+              />
+            )}
           </div>
         </div>
       </div>

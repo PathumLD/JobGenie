@@ -66,6 +66,15 @@ export function CandidateLoginForm() {
   const checkResumeExistenceAndRedirect = async (accessToken: string) => {
     try {
       if (accessToken) {
+        // Check if there's a pending interview notification first
+        const pendingNotification = localStorage.getItem('pendingInterviewNotification');
+        if (pendingNotification) {
+          console.log('✅ Pending interview notification found, redirecting to interviews page...');
+          // Don't remove the notification ID here - let the interviews page handle it
+          router.push(`/candidate/interviews/${pendingNotification}`);
+          return;
+        }
+
         const resumeCheckResponse = await fetch('/api/candidate/resume/check-existence', {
           headers: {
             'Authorization': `Bearer ${accessToken}`,

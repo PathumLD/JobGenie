@@ -10,3 +10,5 @@ export { EmployerSidebar } from './EmployerSidebar';
 export { ApprovalNotification } from './ApprovalNotification';
 export { CandidateFilter } from './CandidateFilter';
 export { CandidateResults } from './CandidateResults';
+export { NotificationModal } from './NotificationModal';
+export { ScheduleInterviewModal } from './ScheduleInterviewModal';

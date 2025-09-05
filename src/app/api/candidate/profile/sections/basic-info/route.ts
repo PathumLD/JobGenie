@@ -69,6 +69,7 @@ interface BasicInfoUpdateData {
   privacy_settings?: Record<string, unknown>;
   preferences?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  professional_qualification?: string;
 }
 
 interface BasicInfoResponse {
@@ -135,6 +136,7 @@ interface BasicInfoResponse {
     privacy_settings: Record<string, unknown> | null;
     preferences: Record<string, unknown> | null;
     metadata: Record<string, unknown> | null;
+    professional_qualification: string | null;
     created_at: Date | null;
     updated_at: Date | null;
   };
@@ -318,6 +320,7 @@ export async function PUT(
     if (body.privacy_settings !== undefined) updateData.privacy_settings = body.privacy_settings;
     if (body.preferences !== undefined) updateData.preferences = body.preferences;
     if (body.metadata !== undefined) updateData.metadata = body.metadata;
+    if (body.professional_qualification !== undefined) updateData.professional_qualification = body.professional_qualification;
 
     console.log('🔍 Basic info update - updating candidate profile');
     console.log('📊 Update data:', updateData);
@@ -393,6 +396,7 @@ export async function PUT(
       privacy_settings: null, // Not in schema
       preferences: null, // Not in schema
       metadata: null, // Not in schema
+      professional_qualification: updatedCandidate.professional_qualification,
       created_at: updatedCandidate.created_at,
       updated_at: updatedCandidate.updated_at,
     };

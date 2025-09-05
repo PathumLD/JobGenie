@@ -246,6 +246,132 @@ export const createCompanyRejectionEmail = (email: string, companyName: string, 
   };
 };
 
+// Email template for interview notification
+export const createInterviewNotificationEmail = (
+  email: string, 
+  candidateName: string, 
+  companyName: string, 
+  designation: string, 
+  timeSlots: Array<{date: string, time: string}>,
+  notificationId?: string
+) => {
+  console.log('createInterviewNotificationEmail called with:', {
+    email,
+    candidateName,
+    companyName,
+    designation,
+    timeSlots,
+    notificationId
+  });
+  const timeSlotsHtml = timeSlots.map(slot => 
+    `<li style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #667eea;">
+      <strong>Date:</strong> ${new Date(slot.date).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}<br>
+      <strong>Time:</strong> ${slot.time}
+    </li>`
+  ).join('');
+
+  const timeSlotsText = timeSlots.map(slot => 
+    `- Date: ${new Date(slot.date).toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })}, Time: ${slot.time}`
+  ).join('\n');
+
+  return {
+    from: `"Job Genie" <${process.env.SMTP_USER || 'noreply@jobgenie.com'}>`,
+    to: email,
+    subject: `Interview Invitation from ${companyName} - Job Genie`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Job Genie</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Your AI-Powered Job Matching Platform</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <div style="text-align: center; margin: 20px 0;">
+            <div style="background: #667eea; color: white; width: 60px; height: 60px; border-radius: 50%; 
+                        display: inline-flex; align-items: center; justify-content: center; font-size: 24px;">
+              📧
+            </div>
+          </div>
+          
+          <h2 style="color: #333; margin: 0 0 20px 0; text-align: center;">Interview Invitation</h2>
+          
+          <p style="color: #666; line-height: 1.6; margin: 0 0 20px 0;">
+            Hi ${candidateName || 'there'},<br><br>
+            Great news! <strong>${companyName}</strong> is interested in having an interview with you for the <strong>${designation}</strong> position.
+          </p>
+          
+          <p style="color: #666; line-height: 1.6; margin: 20px 0;">
+            They have provided the following time slots for your convenience:
+          </p>
+          
+          <div style="background: white; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #e9ecef;">
+            <h3 style="color: #333; margin: 0 0 15px 0;">Available Time Slots:</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              ${timeSlotsHtml}
+            </ul>
+          </div>
+          
+          <p style="color: #666; line-height: 1.6; margin: 20px 0;">
+            If you are interested in this opportunity, please follow the link below to log in and confirm your preferred time slot.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/candidate/login${notificationId ? `?notification=${notificationId}` : ''}" 
+               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; 
+                      padding: 15px 30px; text-decoration: none; border-radius: 25px; 
+                      display: inline-block; font-weight: bold; font-size: 16px;">
+              Login to Confirm Time Slot
+            </a>
+          </div>
+          
+          <p style="color: #666; line-height: 1.6; margin: 20px 0; font-size: 14px;">
+            Please respond as soon as possible to secure your preferred time slot. If none of these times work for you, 
+            you can contact the employer directly through the platform after logging in.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #e9ecef; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+            © 2024 Job Genie. All rights reserved.<br>
+            This email was sent to ${email}
+          </p>
+        </div>
+      </div>
+    `,
+    text: `
+      Job Genie - Interview Invitation
+      
+      Hi ${candidateName || 'there'},
+      
+      Great news! ${companyName} is interested in having an interview with you for the ${designation} position.
+      
+      They have provided the following time slots for your convenience:
+      
+      ${timeSlotsText}
+      
+      If you are interested in this opportunity, please follow the link below to log in and confirm your preferred time slot.
+      
+      Login to confirm: ${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/candidate/login
+      
+      Please respond as soon as possible to secure your preferred time slot. If none of these times work for you, 
+      you can contact the employer directly through the platform after logging in.
+      
+      Best regards,
+      The Job Genie Team
+    `
+  };
+};
+
 // Email template for verification success
 export const createVerificationSuccessEmail = (email: string, firstName?: string) => {
   return {

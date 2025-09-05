@@ -9,7 +9,7 @@ interface CandidateLayoutProps {
   children: React.ReactNode;
 }
 
-export function CandidateLayout({ children }: CandidateLayoutProps) {
+export function CandidateLayout({ children }: Readonly<CandidateLayoutProps>) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -49,16 +49,19 @@ export function CandidateLayout({ children }: CandidateLayoutProps) {
             sidebarExpanded ? 'ml-64' : 'ml-16'
           } pt-16`}
         >
-          <div className="p-6">
+          <div className="p-4">
             {children}
           </div>
         </main>
 
         {/* Mobile Overlay */}
         {isMobile && sidebarExpanded && (
-          <div
+          <button
             className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
             onClick={() => setSidebarExpanded(false)}
+            onKeyDown={(e) => e.key === 'Escape' && setSidebarExpanded(false)}
+            type="button"
+            aria-label="Close sidebar"
           />
         )}
       </div>

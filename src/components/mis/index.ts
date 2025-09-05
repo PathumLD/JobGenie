@@ -7,3 +7,4 @@ export { MisProfileSection } from './MisProfileSection';
 export { CandidateApprovalPage } from './CandidateApprovalPage';
 export { CompanyVerificationPage } from './CompanyVerificationPage';
 export { CompanyProfileViewPage } from './CompanyProfileViewPage';
+export { DashboardCards } from './DashboardCards';

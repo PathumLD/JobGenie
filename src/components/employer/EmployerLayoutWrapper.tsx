@@ -7,7 +7,7 @@ interface EmployerLayoutWrapperProps {
   children: React.ReactNode;
 }
 
-export function EmployerLayoutWrapper({ children }: EmployerLayoutWrapperProps) {
+export function EmployerLayoutWrapper({ children }: Readonly<EmployerLayoutWrapperProps>) {
   const pathname = usePathname();
   
   // Don't wrap auth pages with EmployerLayout

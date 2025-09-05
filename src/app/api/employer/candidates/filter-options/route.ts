@@ -118,6 +118,23 @@ export async function GET(request: NextRequest): Promise<NextResponse<FilterOpti
       isco_08_major_label: designation.isco_08.major_label
     }));
 
+    // Standard qualification options
+    const standardQualifications = [
+      { value: 'high_school', label: 'High School' },
+      { value: 'associate_degree', label: 'Associate Degree' },
+      { value: 'bachelors_degree', label: 'Bachelor\'s Degree' },
+      { value: 'masters_degree', label: 'Master\'s Degree' },
+      { value: 'doctorate_phd', label: 'Doctorate (PhD)' },
+      { value: 'undergraduate', label: 'Undergraduate' },
+      { value: 'post_graduate', label: 'Post Graduate' },
+      { value: 'diploma', label: 'Diploma' },
+      { value: 'certificate', label: 'Certificate' },
+      { value: 'professional_certification', label: 'Professional Certification' },
+      { value: 'vocational_training', label: 'Vocational Training' },
+      { value: 'some_college', label: 'Some College' },
+      { value: 'no_formal_education', label: 'No Formal Education' }
+    ];
+
     // Get unique qualifications from education data
     const qualifications = await prisma.education.findMany({
       select: {
@@ -133,23 +150,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<FilterOpti
       }
     });
 
-    const uniqueQualifications = new Set<string>();
-    qualifications.forEach(qual => {
-      if (qual.degree_diploma) {
-        uniqueQualifications.add(qual.degree_diploma);
-      }
-      if (qual.field_of_study) {
-        uniqueQualifications.add(qual.field_of_study);
-      }
-    });
-
-    const qualificationsList = Array.from(uniqueQualifications)
-      .filter(q => q && q.trim() !== '')
-      .sort((a, b) => a.localeCompare(b))
-      .map(qual => ({
-        value: qual,
-        label: qual
-      }));
+    // Use standard qualifications as the base list
+    const qualificationsList = standardQualifications;
 
     return NextResponse.json({
       success: true,

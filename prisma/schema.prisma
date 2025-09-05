@@ -77,6 +77,7 @@ model Candidate {
   github_url                    String?
   linkedin_url                  String?
   professional_summary          String?
+  professional_qualification    ProfessionalQualification?
   total_years_experience        Float?                @default(0.0)
   open_to_relocation            Boolean?              @default(false)
   willing_to_travel             Boolean?              @default(false)
@@ -627,24 +628,46 @@ model Interview {
   @@map("interview")
 }
 
+model InterviewNotification {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employer_id   String   @db.Uuid
+  candidate_id  String   @db.Uuid
+  time_slots    Json     // Array of {date: string, time: string}
+  status        String   @default("pending") @db.VarChar(20) // pending, accepted, rejected, expired
+  selected_slot Json?    // {date: string, time: string} - candidate's choice
+  message       String?  // Optional message from employer
+  designation   String?  // Selected designation/position name
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  employer      Employer @relation(fields: [employer_id], references: [id], onDelete: Cascade)
+
+  @@index([employer_id])
+  @@index([candidate_id])
+  @@index([status])
+  @@index([created_at])
+  @@map("interview_notification")
+}
+
 model Employer {
-  user_id            String       @id @db.Uuid
-  company_id         String       @db.Uuid
-  first_name         String?      @db.VarChar(100)
-  last_name          String?      @db.VarChar(100)
-  address            String?
-  phone              String?      @db.VarChar(20)
-  job_title          String?      @db.VarChar(200)
-  department         String?      @db.VarChar(100)
-  role               EmployerRole
-  permissions        Json?
-  is_primary_contact Boolean      @default(false)
-  phone_extension    String?      @db.VarChar(10)
-  created_at         DateTime     @default(now())
-  updated_at         DateTime     @updatedAt
-  is_verified        Boolean      @default(false)
-  company            Company      @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  user               User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String                  @unique @db.Uuid
+  company_id             String                  @db.Uuid
+  first_name             String?                 @db.VarChar(100)
+  last_name              String?                 @db.VarChar(100)
+  address                String?
+  phone                  String?                 @db.VarChar(20)
+  job_title              String?                 @db.VarChar(200)
+  department             String?                 @db.VarChar(100)
+  role                   EmployerRole
+  permissions            Json?
+  is_primary_contact     Boolean                 @default(false)
+  phone_extension        String?                 @db.VarChar(10)
+  created_at             DateTime                @default(now())
+  updated_at             DateTime                @updatedAt
+  is_verified            Boolean                 @default(false)
+  company                Company                 @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  user                   User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  interview_notifications InterviewNotification[]
 
   @@index([company_id])
   @@index([role])
@@ -1023,4 +1046,20 @@ enum ApprovalStatus {
   pending
   approved
   rejected
+}
+
+enum ProfessionalQualification {
+  high_school
+  associate_degree
+  bachelors_degree
+  masters_degree
+  doctorate_phd
+  undergraduate
+  post_graduate
+  diploma
+  certificate
+  professional_certification
+  vocational_training
+  some_college
+  no_formal_education
 }

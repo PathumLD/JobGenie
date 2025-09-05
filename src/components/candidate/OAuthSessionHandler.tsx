@@ -43,6 +43,16 @@ export function OAuthSessionHandler() {
 
               if (profileCheckResponse.ok) {
                 const profileData = await profileCheckResponse.json();
+                
+                // Check if there's a pending interview notification
+                const pendingNotification = localStorage.getItem('pendingInterviewNotification');
+                if (pendingNotification) {
+                  console.log('✅ Pending interview notification found, redirecting to interviews page...');
+                  // Don't remove the notification ID here - let the interviews page handle it
+                  router.push('/candidate/interviews');
+                  return;
+                }
+                
                 if (profileData.success && profileData.isProfileComplete) {
                   // Profile is complete, redirect to jobs page
                   console.log('✅ Profile complete, redirecting to jobs page...');

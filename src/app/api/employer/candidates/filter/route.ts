@@ -11,8 +11,8 @@ const candidateFilterSchema = z.object({
   // Field (ISCO_08 unit)
   field: z.number().optional(),
   
-  // Designation
-  designation: z.number().optional(),
+  // Designation - now mandatory
+  designation: z.number().min(1, 'Designation is required'),
   
   // Expected salary range
   salary_min: z.number().min(0).optional(),
@@ -53,6 +53,7 @@ interface FilteredCandidate {
   location: string | null;
   profile_image_url: string | null;
   professional_summary: string | null;
+  professional_qualification: string | null;
   created_at: Date | null;
   date_of_birth: Date | null;
   // Education data for qualification matching
@@ -140,6 +141,17 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateF
       sort_order: searchParams.get('sort_order') || 'desc'
     };
 
+    // Check if designation is provided
+    if (!queryParams.designation) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Designation is required to filter candidates'
+        }, 
+        { status: 400 }
+      );
+    }
+
     // Validate query parameters
     const validationResult = candidateFilterSchema.safeParse(queryParams);
     if (!validationResult.success) {
@@ -205,23 +217,28 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateF
       }
     }
 
-    // Add designation filter - this would need to be linked through some relationship
-    // For now, we'll filter by current_position or title
-    if (designation) {
-      const jobDesignation = await prisma.jobDesignation.findFirst({
-        where: { id: designation },
-        select: { name: true }
+    // Add designation filter - this is now mandatory
+    const jobDesignation = await prisma.jobDesignation.findFirst({
+      where: { id: designation },
+      select: { name: true }
+    });
+    
+    if (jobDesignation) {
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        OR: [
+          { current_position: { contains: jobDesignation.name, mode: 'insensitive' } },
+          { title: { contains: jobDesignation.name, mode: 'insensitive' } }
+        ]
       });
-      
-      if (jobDesignation) {
-        whereClause.AND = whereClause.AND || [];
-        whereClause.AND.push({
-          OR: [
-            { current_position: { contains: jobDesignation.name, mode: 'insensitive' } },
-            { title: { contains: jobDesignation.name, mode: 'insensitive' } }
-          ]
-        });
-      }
+    } else {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Invalid designation selected'
+        }, 
+        { status: 400 }
+      );
     }
 
     // Add salary range filter
@@ -258,16 +275,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateF
       });
     }
 
-    // Add qualification filter (from education)
+    // Add qualification filter (from professional_qualification field)
     if (qualification) {
-      whereClause.educations = {
-        some: {
-          OR: [
-            { degree_diploma: { contains: qualification, mode: 'insensitive' } },
-            { field_of_study: { contains: qualification, mode: 'insensitive' } }
-          ]
-        }
-      };
+      whereClause.professional_qualification = qualification;
     }
 
 
@@ -285,7 +295,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateF
 
     // Fetch candidates with pagination
     const [candidates, total] = await Promise.all([
-      prisma.candidate.findMany({
+      (prisma.candidate as any).findMany({
         where: whereClause,
         select: {
           user_id: true,
@@ -306,6 +316,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateF
           location: true,
           profile_image_url: true,
           professional_summary: true,
+          professional_qualification: true,
           created_at: true,
           date_of_birth: true,
           educations: {
@@ -348,9 +359,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<CandidateF
     ]);
 
     // Transform skills data
-    const transformedCandidates = candidates.map(candidate => ({
+    const transformedCandidates = candidates.map((candidate: any) => ({
       ...candidate,
-      skills: candidate.skills.map(skill => ({
+      skills: candidate.skills.map((skill: any) => ({
         name: skill.skill.name,
         proficiency: skill.proficiency
       }))

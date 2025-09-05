@@ -43,9 +43,10 @@ interface CandidateFilterProps {
   readonly onFilter: (criteria: FilterCriteria) => void;
   readonly onClear: () => void;
   readonly loading?: boolean;
+  readonly onFilterOptionsLoaded?: (options: FilterOptions) => void;
 }
 
-export function CandidateFilter({ onFilter, onClear, loading = false }: Readonly<CandidateFilterProps>) {
+export function CandidateFilter({ onFilter, onClear, loading = false, onFilterOptionsLoaded }: Readonly<CandidateFilterProps>) {
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [filters, setFilters] = useState<FilterCriteria>({
@@ -77,7 +78,13 @@ export function CandidateFilter({ onFilter, onClear, loading = false }: Readonly
         
         if (response.ok) {
           const data = await response.json();
+          console.log('CandidateFilter loaded filter options:', data.data);
           setFilterOptions(data.data);
+          // Notify parent component that filter options are loaded
+          if (onFilterOptionsLoaded) {
+            console.log('CandidateFilter calling onFilterOptionsLoaded with:', data.data);
+            onFilterOptionsLoaded(data.data);
+          }
         } else {
           console.error('Failed to fetch filter options');
         }
@@ -103,11 +110,16 @@ export function CandidateFilter({ onFilter, onClear, loading = false }: Readonly
         newFilters.designation = '';
       }
       
+      
       return newFilters;
     });
   };
 
   const handleApplyFilter = () => {
+    // Validate that designation is selected
+    if (!filters.designation) {
+      return;
+    }
     onFilter(filters);
   };
 
@@ -175,97 +187,118 @@ export function CandidateFilter({ onFilter, onClear, loading = false }: Readonly
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Field (ISCO_08) */}
-        <div>
-          <SearchableSelect
-            id="field-select"
-            label="Field (Finance, IT, etc.)"
-            value={filters.field}
-            onChange={(value) => handleFilterChange('field', value)}
-            placeholder="Type to search fields..."
-            options={filterOptions.fields.map(field => ({
-              value: field.unit.toString(),
-              label: field.description
-            }))}
-            helperText="Start typing to search through available job fields"
-          />
+      <CardContent>
+        {/* Mandatory Field Notice */}
+        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <p className="text-sm text-orange-700">
+            <strong>Note:</strong> Designation is mandatory to filter candidates. Other fields are optional.
+          </p>
         </div>
 
-        {/* Designation */}
-        <div>
-          <SearchableSelect
-            id="designation-select"
-            label="Designation"
-            value={filters.designation}
-            onChange={(value) => handleFilterChange('designation', value)}
-            placeholder={filters.field ? "Type to search designations..." : "Select field first"}
-            options={getFilteredDesignations().map(designation => ({
-              value: designation.id.toString(),
-              label: designation.name
-            }))}
-            helperText={filters.field ? "Start typing to search through available designations" : "Please select a field first to see related designations"}
-          />
-        </div>
-
-        {/* Expected Salary Range */}
-        <div>
-          <label htmlFor="salary-range" className="block text-sm font-medium text-gray-700 mb-2">
-            Expected Salary Range
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              id="salary-min"
-              type="number"
-              placeholder="Minimum salary"
-              value={filters.salary_min}
-              onChange={(e) => handleFilterChange('salary_min', e.target.value)}
+        {/* Horizontal Filter Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+          {/* Field (ISCO_08) */}
+          <div className="xl:col-span-2">
+            <SearchableSelect
+              id="field-select"
+              label="Field (Finance, IT, etc.)"
+              value={filters.field}
+              onChange={(value) => handleFilterChange('field', value)}
+              placeholder="Type to search fields..."
+              options={filterOptions.fields.map(field => ({
+                value: field.unit.toString(),
+                label: field.description
+              }))}
+              helperText="Start typing to search through available job fields"
             />
+          </div>
+
+          {/* Designation */}
+          <div className="xl:col-span-2">
+            <SearchableSelect
+              id="designation-select"
+              label="Designation *"
+              value={filters.designation}
+              onChange={(value) => handleFilterChange('designation', value)}
+              placeholder={filters.field ? "Type to search designations..." : "Select field first"}
+              options={getFilteredDesignations().map(designation => ({
+                value: designation.id.toString(),
+                label: designation.name
+              }))}
+              helperText={filters.field ? "Start typing to search through available designations" : "Please select a field first to see related designations"}
+            />
+          </div>
+
+          {/* Years of Experience */}
+          <div>
             <FormInput
-              id="salary-max"
+              id="experience-input"
               type="number"
-              placeholder="Maximum salary"
-              value={filters.salary_max}
-              onChange={(e) => handleFilterChange('salary_max', e.target.value)}
+              placeholder="Years of experience"
+              value={filters.years_of_experience}
+              onChange={(e) => handleFilterChange('years_of_experience', e.target.value)}
+              label="Years of Experience"
+            />
+          </div>
+
+          {/* Qualification */}
+          <div>
+            <label htmlFor="qualification-select" className="block text-sm font-medium text-gray-700 mb-2">
+              Qualification
+            </label>
+            <FormSelect
+              id="qualification-select"
+              value={filters.qualification}
+              onChange={(e) => handleFilterChange('qualification', e.target.value)}
+              placeholder="Select qualification"
+              options={filterOptions.qualifications.map(qual => ({
+                value: qual.value,
+                label: qual.label
+              }))}
             />
           </div>
         </div>
 
-        {/* Years of Experience */}
-        <div>
-          <FormInput
-            id="experience-input"
-            type="number"
-            placeholder="Years of experience"
-            value={filters.years_of_experience}
-            onChange={(e) => handleFilterChange('years_of_experience', e.target.value)}
-            label="Years of Experience"
-          />
+        {/* Salary Range Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="lg:col-span-2">
+            <label htmlFor="salary-range" className="block text-sm font-medium text-gray-700 mb-2">
+              Expected Salary Range
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <FormInput
+                id="salary-min"
+                type="number"
+                placeholder="Minimum salary"
+                value={filters.salary_min}
+                onChange={(e) => handleFilterChange('salary_min', e.target.value)}
+              />
+              <FormInput
+                id="salary-max"
+                type="number"
+                placeholder="Maximum salary"
+                value={filters.salary_max}
+                onChange={(e) => handleFilterChange('salary_max', e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Qualification */}
-        <div>
-          <label htmlFor="qualification-select" className="block text-sm font-medium text-gray-700 mb-2">
-            Qualification
-          </label>
-          <FormSelect
-            id="qualification-select"
-            value={filters.qualification}
-            onChange={(e) => handleFilterChange('qualification', e.target.value)}
-            placeholder="Select qualification"
-            options={filterOptions.qualifications.map(qual => ({
-              value: qual.value,
-              label: qual.label
-            }))}
-          />
-        </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t justify-end">
+          <Button
+            variant="outline"
+            onClick={handleClearFilter}
+            disabled={loading}
+            className="flex-1 sm:flex-none order-2 sm:order-1"
+          >
+            Clear Filters
+          </Button>
           <Button
             onClick={handleApplyFilter}
-            disabled={loading}
-            className="flex-1 sm:flex-none"
+            disabled={loading || !filters.designation}
+            className="flex-1 sm:flex-none order-1 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 text-sm py-2 sm:py-3 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -276,20 +309,6 @@ export function CandidateFilter({ onFilter, onClear, loading = false }: Readonly
               'Search Candidates'
             )}
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleClearFilter}
-            disabled={loading}
-            className="flex-1 sm:flex-none"
-          >
-            Clear Filters
-          </Button>
-        </div>
-
-        {/* Note */}
-        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
-          <strong>Note:</strong> Employers will see potential candidates in the default format. 
-          Name and contact numbers will not be visible initially for privacy protection.
         </div>
       </CardContent>
     </Card>

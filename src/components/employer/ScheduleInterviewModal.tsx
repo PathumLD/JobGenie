@@ -28,7 +28,7 @@ export function ScheduleInterviewModal({
   candidateId, 
   candidateName,
   onSuccess 
-}: ScheduleInterviewModalProps) {
+}: Readonly<ScheduleInterviewModalProps>) {
   const [formData, setFormData] = useState<ScheduleInterviewFormData>({
     interview_type: 'video_call',
     scheduled_date: '',
